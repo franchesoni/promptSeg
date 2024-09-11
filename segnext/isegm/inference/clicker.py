@@ -154,3 +154,19 @@ class Clicker(object):
 
     def __len__(self):
         return len(self.clicks_list)
+
+class RandomClicker(Clicker):
+    # exactly the same but the click is now taken at random from the error region
+    def _get_next_click(
+            self, 
+            pred_mask, 
+        ) -> Click:
+        np.random.seed(0)  # we always use the same seed for reproducibility
+        fn_mask = np.logical_and(np.logical_and(self.gt_mask, np.logical_not(pred_mask)), self.not_ignore_mask)
+        fp_mask = np.logical_and(np.logical_and(np.logical_not(self.gt_mask), pred_mask), self.not_ignore_mask)
+        error_mask = np.logical_or(fn_mask, fp_mask)
+        coords_y, coords_x = np.where(error_mask)
+        indx = np.random.choice(len(coords_y))
+        is_positive = fn_mask[coords_y[indx], coords_x[indx]]
+        return Click(is_positive=is_positive, coords=(coords_y[indx], coords_x[indx]))
+
