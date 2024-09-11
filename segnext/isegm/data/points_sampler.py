@@ -283,7 +283,7 @@ def generate_probs(max_num_points, gamma):
         probs.append(last_value)
         last_value *= gamma
 
-    probs = np.array(probs)
+    probs = np.array(probs).astype(float)
     probs /= probs.sum()
 
     return probs
