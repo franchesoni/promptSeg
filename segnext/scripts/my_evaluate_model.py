@@ -9,7 +9,7 @@ from easydict import EasyDict as edict
 segnext_path = Path(__file__).parent.parent.as_posix()
 sys.path.insert(0, segnext_path)
 
-from isegm.data.datasets import DavisDataset, HQSeg44kDataset
+from isegm.data.my_datasets import DavisDataset, HQSeg44kDataset
 from isegm.model.is_plainvit_model import PlainVitModel
 from isegm.inference.predictor import BasePredictor
 from isegm.inference.utils import load_is_model, get_iou
