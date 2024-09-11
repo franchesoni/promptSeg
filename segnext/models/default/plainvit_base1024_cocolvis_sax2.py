@@ -87,6 +87,7 @@ def train(model: PlainVitModel, cfg) -> None:
             min_height=cfg.img_size,
             min_width=cfg.img_size,
             border_mode=0,
+            value=0,
             position='top_left',
         ),
     ], p=1.0)
@@ -97,6 +98,7 @@ def train(model: PlainVitModel, cfg) -> None:
             min_height=cfg.img_size, 
             min_width=cfg.img_size, 
             border_mode=0,
+            value=0,
             position='top_left',
         ),
     ], p=1.0)
