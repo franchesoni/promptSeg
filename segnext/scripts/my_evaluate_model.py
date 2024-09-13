@@ -28,14 +28,18 @@ def load_config_file(config_path, model_name=None, return_edict=False):
     return edict(cfg) if return_edict else cfg
 
 
-def main(checkpoint, datasets="DAVIS,HQSeg44K"):
+def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False):
     cfg = load_config_file("config.yml", return_edict=True)
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    if not cpu:
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    else:
+        device = torch.device("cpu")
     ckpt_path = Path(checkpoint)
     logs_path = Path("logs")
     logs_path.mkdir(exist_ok=True, parents=True)
 
     model = load_is_model(ckpt_path, device)
+    # model.load_state_dict(torch.load('segnext/epoch_9.pth', map_location=device))
     predictor = BasePredictor(model)
 
     datasets = datasets if isinstance(datasets, tuple) else datasets.split(",")
