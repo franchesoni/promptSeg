@@ -17,8 +17,36 @@ so we do
     DAVIS mIoU@1=65.31%;
     HQSeg44K mIoU@1=31.08%;
 - with my eval procedure but their dataloaders
-    DAVIS mIoU@1=65.31%;
+    DAVIS mIoU@1=65.31%;            <--- BASELINE 
     HQSeg44K mIoU@1=31.08%;
 - with my eval and my trained model
     seems that the model doesn't train
     DAVIS mIoU@1=14.94%;
+- with my eval and their train model with 1 click (epoch 19)
+    DAVIS mIoU@1=56.29%;
+    HQSeg44K mIoU21=20.96%;
+it's considerably worse for now. More training? or do more clicks help? strange
+- with my eval and their train model with 1 click (epoch 29)
+    DAVIS mIoU@1=61.22%;
+    HQSeg44K mIoU@1=25.06%;
+well it's getting there, -4 for davis and -6 for HQSeg44k
+- with my eval and their train model with 1 click (epoch 64)
+    DAVIS mIoU@1=62.60%;  -2.71
+    HQSeg44K mIoU@1=26.87%;  -4.21
+- with my eval and their train model with 1 click (epoch 84)
+    DAVIS mIoU@1=63.73%;  -1.58
+    HQSeg44K mIoU@1=29.23%;  -1.85
+- with my eval and their train model with 1 click (epoch 90)
+    DAVIS mIoU@1=64.29%;  -1.02
+    HQSeg44K mIoU@1=28.78%;  -2.26
+- with my eval and their train model with 1 click (epoch 94+)
+    DAVIS mIoU@1=64.29%;  -1.02
+    HQSeg44K mIoU@1=29.04%;  -2.04
+
+
+commands were: 
+- train: `bash run_train.sh`
+- evaluate: `python segnext/scripts/my_evaluate_model.py model_mmdd_yyyy/default/plainvit_base1024_cocolvis_sax2/019/checkpoints/090.pth`. Our run is 019
+
+training again 23 march 2025
+
