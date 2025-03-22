@@ -3,14 +3,14 @@ import pickle
 import numpy as np
 import torch
 from torchvision import transforms
-from .points_sampler import MultiPointSampler
+# from .points_sampler import MultiPointSampler
 from .sample import DSample
 
 
 class ISDataset(torch.utils.data.dataset.Dataset):
     def __init__(self,
                  augmentator=None,
-                 points_sampler=MultiPointSampler(max_num_points=12),
+                 points_sampler=None,
                  min_object_area=0,
                  keep_background_prob=0.0,
                  with_image_info=False,
@@ -18,6 +18,8 @@ class ISDataset(torch.utils.data.dataset.Dataset):
                  samples_scores_gamma=1.0,
                  epoch_len=-1):
         super(ISDataset, self).__init__()
+        if points_sampler is None:
+            raise ValueError('points_sampler must be provided')
         self.epoch_len = epoch_len
         self.augmentator = augmentator
         self.min_object_area = min_object_area
