@@ -9,5 +9,5 @@
 # train vitb-sax2 model on coco+lvis
 MODEL_CONFIG=./segnext/models/default/plainvit_base1024_cocolvis_sax2_1click.py
 export PYTHONPATH=$PYTHONPATH:/home/fmarchesoni/promptSeg
-torchrun --nproc-per-node=1 --master-port 29505 ./segnext/train.py ${MODEL_CONFIG} --batch-size=7 --gpus=0 --workers=48 
+torchrun --nproc-per-node=1 --master-port 29505 ./segnext/train.py ${MODEL_CONFIG} --batch-size=6 --gpus=1 --workers=48 
  
