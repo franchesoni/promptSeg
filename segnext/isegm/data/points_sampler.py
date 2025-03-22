@@ -28,7 +28,7 @@ class BasePointSampler:
 
 
 class MultiPointSampler(BasePointSampler):
-    def __init__(self, max_num_points, prob_gamma=0.7, expand_ratio=0.1,
+    def __init__(self, one_random_click_sampler, max_num_points, prob_gamma=0.7, expand_ratio=0.1,
                  positive_erode_prob=0.9, positive_erode_iters=3,
                  negative_bg_prob=0.1, negative_other_prob=0.4, negative_border_prob=0.5,
                  merge_objects_prob=0.0, max_num_merged_objects=2,
@@ -36,6 +36,12 @@ class MultiPointSampler(BasePointSampler):
                  first_click_center=False, only_one_first_click=False,
                  sfc_inner_k=1.7, sfc_full_inner_prob=0.0):
         super().__init__()
+        self.one_random_click_sampler = one_random_click_sampler
+        if one_random_click_sampler:
+            assert max_num_points == 1, "only one click should be supported"
+            assert merge_objects_prob == 0, "merging objects should be disabled"
+            assert max_num_merged_objects == 1, "merging objects should be disabled"
+
         self.max_num_points = max_num_points
         self.expand_ratio = expand_ratio
         self.positive_erode_prob = positive_erode_prob
@@ -60,6 +66,11 @@ class MultiPointSampler(BasePointSampler):
         self._neg_probs = generate_probs(max_num_points + 1, gamma=prob_gamma)
         self._neg_masks = None
 
+        if self.one_random_click_sampler:
+            self.neg_strategies = []
+            self.neg_strategies_prob = []
+            self._neg_probs = []
+
     def sample_object(self, sample: DSample):
         if len(sample) == 0:
             bg_mask = sample.get_background_mask()
@@ -70,6 +81,8 @@ class MultiPointSampler(BasePointSampler):
             return
 
         gt_mask, pos_masks, neg_masks = self._sample_mask(sample)
+        if self.one_random_click_sampler:
+            assert len(pos_masks) == 1, "only one click should be supported"
         binary_gt_mask = gt_mask > 0.5 if self.soft_targets else gt_mask > 0
 
         self.selected_mask = gt_mask
@@ -96,6 +109,8 @@ class MultiPointSampler(BasePointSampler):
         root_obj_ids = sample.root_objects
 
         if len(root_obj_ids) > 1 and random.random() < self.merge_objects_prob:
+            if self.one_random_click_sampler:
+                raise ValueError("you shouldn't be merging objects with the one click sampler")
             max_selected_objects = min(len(root_obj_ids), self.max_num_merged_objects)
             num_selected_objects = np.random.randint(2, max_selected_objects + 1)
             random_ids = random.sample(root_obj_ids, num_selected_objects)
@@ -117,6 +132,8 @@ class MultiPointSampler(BasePointSampler):
 
         pos_masks = [self._positive_erode(x) for x in pos_segments]
         neg_masks = [self._positive_erode(x) for x in neg_segments]
+        if self.one_random_click_sampler:
+            assert len(neg_masks) == 0, "this shouldn't happen with one click"
 
         return gt_mask, pos_masks, neg_masks
 
@@ -178,10 +195,18 @@ class MultiPointSampler(BasePointSampler):
         neg_masks = self._neg_masks['required'] + [neg_strategy]
         neg_points = self._multi_mask_sample_points(neg_masks,
                                                     is_negative=[False] * len(self._neg_masks['required']) + [True])
+        if self.one_random_click_sampler:
+            assert len(neg_points) == 0, "this shouldn't happen with only one click"
 
         return pos_points + neg_points
 
     def _multi_mask_sample_points(self, selected_masks, is_negative, with_first_click=False):
+        if self.one_random_click_sampler:
+            mask = selected_masks[0]
+            is_neg = False
+            points = self._sample_points(mask, is_negative=is_neg, with_first_click=with_first_click)
+            assert len(points) == 1, "fix this"
+            return points
         selected_masks = selected_masks[:self.max_num_points]
 
         each_obj_points = [
@@ -220,6 +245,14 @@ class MultiPointSampler(BasePointSampler):
         return points
 
     def _sample_points(self, mask, is_negative=False, with_first_click=False):
+        if self.one_random_click_sampler:
+            assert not is_negative, "this shouldn't happen with one click"
+            indices = np.argwhere(mask)
+            if not len(indices):
+                raise ValueError("mask seems to be 0")
+            click = indices[np.random.randint(0, len(indices))].tolist() + [0]
+            return [click]  # points
+
         if is_negative:
             num_points = np.random.choice(np.arange(self.max_num_points + 1), p=self._neg_probs)
         else:
@@ -233,6 +266,7 @@ class MultiPointSampler(BasePointSampler):
                 assert math.isclose(sum(indices_probs), 1.0)
         else:
             indices = np.argwhere(mask)
+        # assert len(indices) > 0, "mask seems to be 0"
 
         points = []
         for j in range(num_points):
