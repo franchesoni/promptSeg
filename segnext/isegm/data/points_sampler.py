@@ -66,10 +66,10 @@ class MultiPointSampler(BasePointSampler):
         self._neg_probs = generate_probs(max_num_points + 1, gamma=prob_gamma)
         self._neg_masks = None
 
-        if self.one_random_click_sampler:
-            self.neg_strategies = []
-            self.neg_strategies_prob = []
-            self._neg_probs = []
+        # if self.one_random_click_sampler:
+        #     self.neg_strategies = []
+        #     self.neg_strategies_prob = []
+        #     self._neg_probs = []
 
     def sample_object(self, sample: DSample):
         if len(sample) == 0:
@@ -195,18 +195,16 @@ class MultiPointSampler(BasePointSampler):
         neg_masks = self._neg_masks['required'] + [neg_strategy]
         neg_points = self._multi_mask_sample_points(neg_masks,
                                                     is_negative=[False] * len(self._neg_masks['required']) + [True])
-        if self.one_random_click_sampler:
-            assert len(neg_points) == 0, "this shouldn't happen with only one click"
 
         return pos_points + neg_points
 
     def _multi_mask_sample_points(self, selected_masks, is_negative, with_first_click=False):
-        if self.one_random_click_sampler:
-            mask = selected_masks[0]
-            is_neg = False
-            points = self._sample_points(mask, is_negative=is_neg, with_first_click=with_first_click)
-            assert len(points) == 1, "fix this"
-            return points
+        # if self.one_random_click_sampler:
+        #     assert len(selected_masks) == 1
+        #     mask = selected_masks[0]
+        #     is_neg = is_negative[0]
+        #     points = self._sample_points(mask, is_negative=is_neg, with_first_click=with_first_click)
+        #     return points
         selected_masks = selected_masks[:self.max_num_points]
 
         each_obj_points = [
@@ -245,14 +243,13 @@ class MultiPointSampler(BasePointSampler):
         return points
 
     def _sample_points(self, mask, is_negative=False, with_first_click=False):
-        if self.one_random_click_sampler:
-            assert not is_negative, "this shouldn't happen with one click"
-            indices = np.argwhere(mask)
-            if not len(indices):
-                raise ValueError("mask seems to be 0")
-            click = indices[np.random.randint(0, len(indices))].tolist() + [0]
-            return [click]  # points
-
+        # if self.one_random_click_sampler:
+        #     assert not is_negative, "this shouldn't happen with one click"
+        #     indices = np.argwhere(mask)
+        #     if not len(indices):
+        #         raise ValueError("mask seems to be 0")
+        #     click = indices[np.random.randint(0, len(indices))].tolist() + [0]
+        #     return [click]  # points
         if is_negative:
             num_points = np.random.choice(np.arange(self.max_num_points + 1), p=self._neg_probs)
         else:
@@ -266,7 +263,6 @@ class MultiPointSampler(BasePointSampler):
                 assert math.isclose(sum(indices_probs), 1.0)
         else:
             indices = np.argwhere(mask)
-        assert len(indices) > 0, "mask seems to be 0"
 
         points = []
         for j in range(num_points):
