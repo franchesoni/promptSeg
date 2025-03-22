@@ -104,10 +104,11 @@ def train(model: PlainVitModel, cfg) -> None:
     ], p=1.0)
 
     points_sampler = MultiPointSampler(
-        cfg.num_max_points, 
+        one_random_click_sampler=True,
+        max_num_points=cfg.num_max_points, 
         prob_gamma=0.80,
-        merge_objects_prob=0.15,
-        max_num_merged_objects=2
+        merge_objects_prob=0,
+        max_num_merged_objects=1
     )
 
     trainset = CocoLvisDataset(
