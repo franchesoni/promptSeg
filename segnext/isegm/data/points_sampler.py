@@ -266,7 +266,7 @@ class MultiPointSampler(BasePointSampler):
                 assert math.isclose(sum(indices_probs), 1.0)
         else:
             indices = np.argwhere(mask)
-        # assert len(indices) > 0, "mask seems to be 0"
+        assert len(indices) > 0, "mask seems to be 0"
 
         points = []
         for j in range(num_points):
