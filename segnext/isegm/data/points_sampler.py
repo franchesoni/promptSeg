@@ -195,7 +195,10 @@ class MultiPointSampler(BasePointSampler):
             assert neg_points == [(-1,-1,-1)], "there should be no negative point"
             null_points = neg_points.copy()
             if np.random.rand() < 0.5:  # in half of the cases we sample a negative point from the complement mask
-                neg_points = self._multi_mask_sample_points([~self._selected_masks[0]], is_negative=[False], with_first_click=self.first_click_center)  # this should be a neg point randomly sampled
+                if len(self._selected_masks[0]):  # if there is a mask (sometimes there isn't, the model needs to predict even without a mask, which is strange for an iis model and for a segmentation dataset)
+                    neg_points = self._multi_mask_sample_points([~(self._selected_masks[0])], is_negative=[False], with_first_click=self.first_click_center)  # this should be a neg point randomly sampled
+                else:
+                    neg_points = null_points 
                 return null_points + neg_points
             else:
                 return pos_points + null_points
