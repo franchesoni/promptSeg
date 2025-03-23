@@ -56,22 +56,21 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False):
         for index in tqdm(range(len(dataset)), leave=False):
             sample = dataset.get_sample(index)
             image = sample.image
+            assert len(sample.objects_ids) == 1
 
             with torch.no_grad():
+                # evaluate sample
+                gt_mask = sample.gt_mask(sample.objects_ids[0])
+                clicker = Clicker(gt_mask=gt_mask)
+                pred_mask = np.zeros_like(gt_mask)
+
+                clicker.make_next_click(pred_mask)
                 predictor.set_image(image)
+                pred_probs = predictor.predict(clicker)
+                pred_mask = pred_probs > 0.5
 
-                for object_id in sample.objects_ids:
-                    # evaluate sample
-                    gt_mask = sample.gt_mask(object_id)
-                    clicker = Clicker(gt_mask=gt_mask)
-                    pred_mask = np.zeros_like(gt_mask)
-
-                    clicker.make_next_click(pred_mask)
-                    pred_probs = predictor.predict(clicker)
-                    pred_mask = pred_probs > 0.5
-
-                    iou = get_iou(gt_mask, pred_mask)
-                    all_ious.append(iou)
+                iou = get_iou(gt_mask, pred_mask)
+                all_ious.append(iou)
 
         print("mean iou for", dataset_name, np.mean(all_ious))
 
