@@ -48,5 +48,15 @@ commands were:
 - train: `bash run_train.sh`
 - evaluate: `python segnext/scripts/my_evaluate_model.py model_mmdd_yyyy/default/plainvit_base1024_cocolvis_sax2/019/checkpoints/090.pth`. Our run is 019
 
-training again 23 march 2025
+training again 23 march 2025, one positive click only (021)
+training again 23 march 2025, one positive click only but 512 img size (022)
+512 seems to perform better than 1024, and trains faster, which is great news
+i need to train now with random positive OR negative click, which i launched (023)
+saw strange things:
+- sometimes there's no mask for the image-mask pair
+- davis perf depends a lot on the clicks
+- the clicks i was doing didn't look random
+
+inference time scaling with data augmentations
+- started implementing the geometric transforms
 
