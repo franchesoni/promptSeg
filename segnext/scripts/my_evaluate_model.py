@@ -28,7 +28,7 @@ def load_config_file(config_path, model_name=None, return_edict=False):
     return edict(cfg) if return_edict else cfg
 
 
-def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False):
+def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1):
     cfg = load_config_file("config.yml", return_edict=True)
     if not cpu:
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -61,16 +61,59 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False):
             with torch.no_grad():
                 # evaluate sample
                 gt_mask = sample.gt_mask(sample.objects_ids[0])
-                clicker = Clicker(gt_mask=gt_mask)
-                pred_mask = np.zeros_like(gt_mask)
+                iou_per_click_indx = []
+                for click_indx in range(c):
+                    clicker = Clicker(gt_mask=gt_mask, seed=click_indx)
+                    pred_mask = np.zeros_like(gt_mask)
+                    clicker.make_next_click(pred_mask)
 
-                clicker.make_next_click(pred_mask)
-                predictor.set_image(image)
-                pred_probs = predictor.predict(clicker)
-                pred_mask = pred_probs > 0.5
+                    if vis:
+                        # Visualization code to save images as png
+                        import matplotlib.pyplot as plt
+                        import os
+                        
+                        # Create visualization directory if it doesn't exist
+                        vis_dir = Path("visualization")
+                        vis_dir.mkdir(exist_ok=True, parents=True)
+                        
+                        # Get click coordinates
+                        click = clicker.get_clicks()[0]
+                        click_y, click_x = click.coords_and_indx[0], click.coords_and_indx[1]
+                        click_type = 'Positive' if click.is_positive else 'Negative'
+                        
+                        # Create figure with subplots
+                        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+                        
+                        # Original image
+                        axes[0].imshow(image)
+                        axes[0].set_title('Original Image')
+                        axes[0].axis('off')
+                        
+                        # Image with click point
+                        axes[1].imshow(image)
+                        axes[1].plot(click_x, click_y, 'ro', markersize=10)  # Red circle for click
+                        axes[1].set_title(f'{click_type} Click at ({click_x}, {click_y})')
+                        axes[1].axis('off')
+                        
+                        # Ground truth mask
+                        axes[2].imshow(gt_mask, cmap='gray')
+                        axes[2].set_title('Ground Truth Mask')
+                        axes[2].axis('off')
+                        
+                        # Save the visualization
+                        sample_name = f"{dataset_name}_{index}"
+                        fig.suptitle(sample_name)
+                        plt.tight_layout()
+                        plt.savefig(os.path.join(vis_dir, f"{sample_name}.png"), dpi=150)
+                        plt.close(fig)
 
-                iou = get_iou(gt_mask, pred_mask)
-                all_ious.append(iou)
+                    predictor.set_image(image)
+                    pred_probs = predictor.predict(clicker)
+                    pred_mask = pred_probs > 0.5
+
+                    iou = get_iou(gt_mask, pred_mask)
+                    iou_per_click_indx.append(iou)
+                all_ious.append(np.mean(iou_per_click_indx))
 
         print("mean iou for", dataset_name, np.mean(all_ious))
 
