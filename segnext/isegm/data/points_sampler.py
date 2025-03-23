@@ -191,6 +191,14 @@ class MultiPointSampler(BasePointSampler):
         neg_masks = self._neg_masks['required'] + [neg_strategy]
         neg_points = self._multi_mask_sample_points(neg_masks,
                                                     is_negative=[False] * len(self._neg_masks['required']) + [True])
+        if self.one_random_click_sampler == 'posneg':
+            assert neg_points == [(-1,-1,-1)], "there should be no negative point"
+            null_points = neg_points.copy()
+            if np.random.rand() < 0.5:  # in half of the cases we sample a negative point from the complement mask
+                neg_points = self._multi_mask_sample_points([~self._selected_masks[0]], is_negative=[False], with_first_click=self.first_click_center)  # this should be a neg point randomly sampled
+                return null_points + neg_points
+            else:
+                return pos_points + null_points
 
         return pos_points + neg_points
 
