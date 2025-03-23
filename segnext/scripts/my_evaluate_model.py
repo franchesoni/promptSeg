@@ -28,7 +28,7 @@ def load_config_file(config_path, model_name=None, return_edict=False):
     return edict(cfg) if return_edict else cfg
 
 
-def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1):
+def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=False):
     cfg = load_config_file("config.yml", return_edict=True)
     if not cpu:
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -107,9 +107,24 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1):
                         plt.savefig(os.path.join(vis_dir, f"{sample_name}.png"), dpi=150)
                         plt.close(fig)
 
-                    predictor.set_image(image)
-                    pred_probs = predictor.predict(clicker)
-                    pred_mask = pred_probs > 0.5
+                    if aug:
+                        raise NotImplementedError("not yet")
+                        pred_probs_agg = np.zeros_like(gt_mask)
+                        for rotate in range(4):
+                            for flip in range(2):
+                                augimg = flip_rotated(image, rotate=rotate, flip=flip)
+                                click_state = clicker.get_state()  # clicks list of one element
+                                click_state = [flip_rotate_click(click_state[0])]
+                                augclicker = Clicker(gt_mask=gt_mask, seed=click_indx)
+                                augclicker.set_state(click_state)
+                                predictor.set_image(augimg)
+                                pred_probs_agg +=  predictor.predict(clicker)
+                        pred_probs = pred_probs_agg / 8
+                        pred_mask = pred_probs > 0.5
+                    else:
+                        predictor.set_image(image)
+                        pred_probs = predictor.predict(clicker)
+                        pred_mask = pred_probs > 0.5
 
                     iou = get_iou(gt_mask, pred_mask)
                     iou_per_click_indx.append(iou)
