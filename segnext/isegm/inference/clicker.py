@@ -34,11 +34,13 @@ class Clicker(object):
             gt_mask=None, 
             init_clicks=None, 
             ignore_label=-1, 
-            click_indx_offset=0
+            click_indx_offset=0,
+            seed=0,
     ) -> None:
         """
         TBD
         """
+        self.seed = seed
         self.click_indx_offset = click_indx_offset
         if gt_mask is not None:
             self.gt_mask = gt_mask == 1
@@ -161,7 +163,7 @@ class RandomClicker(Clicker):
             self, 
             pred_mask, 
         ) -> Click:
-        np.random.seed(0)  # we always use the same seed for reproducibility
+        np.random.seed(hash(str(pred_mask.sum())) % 2**32 + self.seed)  # different seed for different masks
         fn_mask = np.logical_and(np.logical_and(self.gt_mask, np.logical_not(pred_mask)), self.not_ignore_mask)
         fp_mask = np.logical_and(np.logical_and(np.logical_not(self.gt_mask), pred_mask), self.not_ignore_mask)
         error_mask = np.logical_or(fn_mask, fp_mask)
