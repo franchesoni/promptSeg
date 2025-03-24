@@ -13,7 +13,7 @@ from isegm.data.my_datasets import DavisDataset, HQSeg44kDataset
 from isegm.model.is_plainvit_model import PlainVitModel
 from isegm.inference.predictor import BasePredictor
 from isegm.inference.utils import load_is_model, get_iou
-from isegm.inference.clicker import RandomClicker as Clicker
+from isegm.inference.clicker import RandomClicker as Clicker, Click
 
 
 def load_config_file(config_path, model_name=None, return_edict=False):
@@ -69,6 +69,51 @@ def visualize(clicker, image, gt_mask, dataset_name, index):
     plt.close(fig)
 
 
+def flip_rotate_image(image, rotate, flip):
+    out = image.copy()
+    if flip == 1:
+        out = np.fliplr(out)
+    if rotate > 0:
+        out = np.rot90(out, k=rotate)
+    return out.copy()
+
+
+def flip_rotate_click(click, height, width, rotate, flip):
+    """
+    Transform click coordinates according to rotation and flipping.
+
+    Args:
+        click: Click object with coords_and_indx attribute
+        height: Height of the image (needed for coordinate transformation)
+        width: Width of the image (needed for coordinate transformation)
+        rotate: Number of 90-degree rotations (0-3)
+        flip: Whether to flip horizontally (0: no flip, 1: flip)
+
+    Returns:
+        A new click with transformed coordinates
+    """
+    # Extract coordinates
+    y, x, indx = click.coords_and_indx
+
+    # copy original dimensions
+    orig_height, orig_width = height, width
+
+    # Apply horizontal flip first (if requested)
+    if flip == 1:
+        x = width - x - 1  # Flip x-coordinate
+
+    # Apply rotation
+    for _ in range(rotate):
+        # 90-degree rotation: (y, x) -> (x, height-y-1)
+        y, x = width - x - 1, y
+        # After rotation, height and width are swapped
+        height, width = width, height
+
+    # Update coordinates in the new click object
+    new_click = Click(is_positive=click.is_positive, coords=(y, x), indx=indx)
+    return new_click
+
+
 def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=False):
     cfg = load_config_file("config.yml", return_edict=True)
     if not cpu:
@@ -114,19 +159,41 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                         visualize(clicker, image, gt_mask, dataset_name, index)
 
                     if aug:
-                        raise NotImplementedError("not yet")
-                        pred_probs_agg = np.zeros_like(gt_mask)
+                        pred_probs_agg = np.zeros_like(gt_mask, dtype=float)
                         for rotate in range(4):
                             for flip in range(2):
-                                augimg = flip_rotated(image, rotate=rotate, flip=flip)
+                                # image is (H, W, 3)
+                                aug_img = flip_rotate_image(
+                                    image, rotate=rotate, flip=flip
+                                )
+                                aug_gt_mask = flip_rotate_image(
+                                    gt_mask, rotate=rotate, flip=flip
+                                )
                                 click_state = (
                                     clicker.get_state()
                                 )  # clicks list of one element
-                                click_state = [flip_rotate_click(click_state[0])]
-                                augclicker = Clicker(gt_mask=gt_mask, seed=click_indx)
-                                augclicker.set_state(click_state)
-                                predictor.set_image(augimg)
-                                pred_probs_agg += predictor.predict(clicker)
+                                click_state = [
+                                    flip_rotate_click(
+                                        click_state[0],
+                                        image.shape[0],
+                                        image.shape[1],
+                                        rotate,
+                                        flip,
+                                    )
+                                ]
+                                aug_clicker = Clicker(
+                                    gt_mask=aug_gt_mask, seed=click_indx
+                                )
+                                aug_clicker.set_state(click_state)
+                                predictor.set_image(aug_img)
+                                pred_probs_aug = predictor.predict(aug_clicker)
+                                pred_probs_aug = flip_rotate_image(
+                                    pred_probs_aug, rotate=(4 - rotate) % 4, flip=0
+                                )  # transform back to original domain (step 1, unrotate)
+                                pred_probs_aug = flip_rotate_image(
+                                    pred_probs_aug, rotate=0, flip=flip
+                                )  # transform back to original domain (step 2, unflip)
+                                pred_probs_agg += pred_probs_aug
                         pred_probs = pred_probs_agg / 8
                         pred_mask = pred_probs > 0.5
                     else:
