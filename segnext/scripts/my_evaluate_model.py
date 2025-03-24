@@ -28,10 +28,53 @@ def load_config_file(config_path, model_name=None, return_edict=False):
     return edict(cfg) if return_edict else cfg
 
 
+def visualize(clicker, image, gt_mask, dataset_name, index):
+    # Visualization code to save images as png
+    import matplotlib.pyplot as plt
+    import os
+
+    # Create visualization directory if it doesn't exist
+    vis_dir = Path("visualization")
+    vis_dir.mkdir(exist_ok=True, parents=True)
+
+    # Get click coordinates
+    click = clicker.get_clicks()[0]
+    click_y, click_x = click.coords_and_indx[0], click.coords_and_indx[1]
+    click_type = "Positive" if click.is_positive else "Negative"
+
+    # Create figure with subplots
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Original image
+    axes[0].imshow(image)
+    axes[0].set_title("Original Image")
+    axes[0].axis("off")
+
+    # Image with click point
+    axes[1].imshow(image)
+    axes[1].plot(click_x, click_y, "ro", markersize=10)  # Red circle for click
+    axes[1].set_title(f"{click_type} Click at ({click_x}, {click_y})")
+    axes[1].axis("off")
+
+    # Ground truth mask
+    axes[2].imshow(gt_mask, cmap="gray")
+    axes[2].set_title("Ground Truth Mask")
+    axes[2].axis("off")
+
+    # Save the visualization
+    sample_name = f"{dataset_name}_{index}"
+    fig.suptitle(sample_name)
+    plt.tight_layout()
+    plt.savefig(os.path.join(vis_dir, f"{sample_name}.png"), dpi=150)
+    plt.close(fig)
+
+
 def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=False):
     cfg = load_config_file("config.yml", return_edict=True)
     if not cpu:
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        )
     else:
         device = torch.device("cpu")
     ckpt_path = Path(checkpoint)
@@ -68,44 +111,7 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                     clicker.make_next_click(pred_mask)
 
                     if vis:
-                        # Visualization code to save images as png
-                        import matplotlib.pyplot as plt
-                        import os
-                        
-                        # Create visualization directory if it doesn't exist
-                        vis_dir = Path("visualization")
-                        vis_dir.mkdir(exist_ok=True, parents=True)
-                        
-                        # Get click coordinates
-                        click = clicker.get_clicks()[0]
-                        click_y, click_x = click.coords_and_indx[0], click.coords_and_indx[1]
-                        click_type = 'Positive' if click.is_positive else 'Negative'
-                        
-                        # Create figure with subplots
-                        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-                        
-                        # Original image
-                        axes[0].imshow(image)
-                        axes[0].set_title('Original Image')
-                        axes[0].axis('off')
-                        
-                        # Image with click point
-                        axes[1].imshow(image)
-                        axes[1].plot(click_x, click_y, 'ro', markersize=10)  # Red circle for click
-                        axes[1].set_title(f'{click_type} Click at ({click_x}, {click_y})')
-                        axes[1].axis('off')
-                        
-                        # Ground truth mask
-                        axes[2].imshow(gt_mask, cmap='gray')
-                        axes[2].set_title('Ground Truth Mask')
-                        axes[2].axis('off')
-                        
-                        # Save the visualization
-                        sample_name = f"{dataset_name}_{index}"
-                        fig.suptitle(sample_name)
-                        plt.tight_layout()
-                        plt.savefig(os.path.join(vis_dir, f"{sample_name}.png"), dpi=150)
-                        plt.close(fig)
+                        visualize(clicker, image, gt_mask, dataset_name, index)
 
                     if aug:
                         raise NotImplementedError("not yet")
@@ -113,12 +119,14 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                         for rotate in range(4):
                             for flip in range(2):
                                 augimg = flip_rotated(image, rotate=rotate, flip=flip)
-                                click_state = clicker.get_state()  # clicks list of one element
+                                click_state = (
+                                    clicker.get_state()
+                                )  # clicks list of one element
                                 click_state = [flip_rotate_click(click_state[0])]
                                 augclicker = Clicker(gt_mask=gt_mask, seed=click_indx)
                                 augclicker.set_state(click_state)
                                 predictor.set_image(augimg)
-                                pred_probs_agg +=  predictor.predict(clicker)
+                                pred_probs_agg += predictor.predict(clicker)
                         pred_probs = pred_probs_agg / 8
                         pred_mask = pred_probs > 0.5
                     else:
