@@ -7,6 +7,7 @@ from isegm.data.datasets import GrabCutDataset, BerkeleyDataset, DavisDataset, \
     SBDEvaluationDataset, PascalVocDataset, BraTSDataset, ssTEMDataset, OAIZIBDataset, \
     HARDDataset, ADE20kDataset, HQSeg44kDataset
 from isegm.utils.serialization import load_model
+from isegm.data.points_sampler import MultiPointSampler
 
 
 def get_time_metrics(all_ious, elapsed_time):
@@ -21,7 +22,7 @@ def get_time_metrics(all_ious, elapsed_time):
 
 def load_is_model(checkpoint, device, **kwargs):
     if isinstance(checkpoint, (str, Path)):
-        state_dict = torch.load(checkpoint, map_location='cpu')
+        state_dict = torch.load(checkpoint, map_location='cpu', weights_only=False)
         # print("Load pre-trained checkpoint from: %s" % checkpoint)
     else:
         state_dict = checkpoint
@@ -48,13 +49,14 @@ def load_single_is_model(state_dict, device, **kwargs):
 
 
 def get_dataset(dataset_name, cfg):
+    points_sampler=MultiPointSampler(max_num_points=12, one_random_click_sampler=False)
     """Get dataset for validation"""
     if dataset_name == 'GrabCut':
         dataset = GrabCutDataset(cfg.GRABCUT_PATH)
     elif dataset_name == 'Berkeley':
         dataset = BerkeleyDataset(cfg.BERKELEY_PATH)
     elif dataset_name == 'DAVIS':
-        dataset = DavisDataset(cfg.DAVIS_PATH)
+        dataset = DavisDataset(cfg.DAVIS_PATH, points_sampler=points_sampler)
     elif dataset_name == 'SBD':
         dataset = SBDEvaluationDataset(cfg.SBD_PATH)
     elif dataset_name == 'SBD_Train':
@@ -74,7 +76,7 @@ def get_dataset(dataset_name, cfg):
     elif dataset_name == 'ADE20K':
         dataset = ADE20kDataset(cfg.ADE20K_PATH, split='val')
     elif dataset_name == 'HQSeg44K':
-        dataset = HQSeg44kDataset(cfg.HQSeg44K_PATH, split='val')
+        dataset = HQSeg44kDataset(cfg.HQSeg44K_PATH, split='val', points_sampler=points_sampler)
     else:
         dataset = None
 
