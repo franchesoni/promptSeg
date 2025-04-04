@@ -159,16 +159,20 @@ class Clicker(object):
 
 class RandomClicker(Clicker):
     # exactly the same but the click is now taken at random from the error region
+    # the randomness depends on the ground truth mask, which means that the click for two error regions of the same area will be in the same pixel in raster order
     def _get_next_click(
             self, 
             pred_mask, 
         ) -> Click:
-        np.random.seed(hash(str(pred_mask.sum())) % 2**32 + self.seed)  # different seed for different masks
+        np.random.seed(0)
+        random_numbers = np.random.rand(*self.gt_mask.shape)
+        random_mean = (random_numbers * self.gt_mask).sum() / self.gt_mask.sum()
+        np.random.seed((self.seed + hash(str(random_mean))) % 2**32)  # unique seed for each mask
         fn_mask = np.logical_and(np.logical_and(self.gt_mask, np.logical_not(pred_mask)), self.not_ignore_mask)
         fp_mask = np.logical_and(np.logical_and(np.logical_not(self.gt_mask), pred_mask), self.not_ignore_mask)
         error_mask = np.logical_or(fn_mask, fp_mask)
         coords_y, coords_x = np.where(error_mask)
-        indx = np.random.choice(len(coords_y))
+        indx = np.random.randint(len(coords_y))
         is_positive = fn_mask[coords_y[indx], coords_x[indx]]
         return Click(is_positive=is_positive, coords=(coords_y[indx], coords_x[indx]))
 
