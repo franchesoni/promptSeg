@@ -5,6 +5,7 @@ from tqdm import tqdm
 import torch
 import yaml
 from easydict import EasyDict as edict
+import matplotlib.pyplot as plt
 
 segnext_path = Path(__file__).parent.parent.as_posix()
 sys.path.insert(0, segnext_path)
@@ -28,7 +29,7 @@ def load_config_file(config_path, model_name=None, return_edict=False):
     return edict(cfg) if return_edict else cfg
 
 
-def visualize(clicker, image, gt_mask, dataset_name, index):
+def visualize(clicker, image, gt_mask, pred_probs, dataset_name, index):
     # Visualization code to save images as png
     import matplotlib.pyplot as plt
     import os
@@ -45,15 +46,19 @@ def visualize(clicker, image, gt_mask, dataset_name, index):
     # Create figure with subplots
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
-    # Original image
+    # Image with click point
     axes[0].imshow(image)
-    axes[0].set_title("Original Image")
+    axes[0].plot(click_x, click_y, "ro", markersize=10)  # Red circle for click
+    axes[0].set_title(f"{click_type} Click at ({click_x}, {click_y})")
     axes[0].axis("off")
 
-    # Image with click point
-    axes[1].imshow(image)
-    axes[1].plot(click_x, click_y, "ro", markersize=10)  # Red circle for click
-    axes[1].set_title(f"{click_type} Click at ({click_x}, {click_y})")
+    # pred vs. gt 
+    err_map = np.zeros_like(image, dtype=float)
+    err_map[:,:,0] = gt_mask if pred_probs is None else pred_probs
+    err_map[:,:,1] = gt_mask
+    err_map[:,:,2] = gt_mask
+    axes[1].imshow(err_map)
+    axes[1].set_title("Error Map (red=pred, blue=green=gt_mask)" if (pred_probs is not None) else "Ground Truth Mask")
     axes[1].axis("off")
 
     # Ground truth mask
@@ -156,7 +161,7 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                     clicker.make_next_click(pred_mask)
 
                     if vis:
-                        visualize(clicker, image, gt_mask, dataset_name, index)
+                        visualize(clicker, image, gt_mask, None, dataset_name, 0)
 
                     if aug:
                         pred_probs_agg = np.zeros_like(gt_mask, dtype=float)
