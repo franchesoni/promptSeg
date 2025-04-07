@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn import ConvModule
+from isegm.model.mmcv_cnn import ConvModule 
 
 from isegm.model.ops import DistMaps, BatchImageNormalize
 from isegm.model.modeling.models_vit import VisionTransformer, PatchEmbed, Block
