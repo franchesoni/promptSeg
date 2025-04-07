@@ -4,8 +4,8 @@ from tqdm import tqdm
 import torch
 
 from isegm.inference.utils import get_iou
-from isegm.inference.clicker import Clicker
-# from isegm.inference.clicker import RandomClicker as Clicker
+# from isegm.inference.clicker import Clicker
+from isegm.inference.clicker import RandomClicker as Clicker
 from isegm.inference.predictor import BasePredictor
 
 
