@@ -127,13 +127,21 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
         )
     else:
         device = torch.device("cpu")
-    ckpt_path = Path(checkpoint)
     logs_path = Path("logs")
     logs_path.mkdir(exist_ok=True, parents=True)
 
-    model = load_is_model(ckpt_path, device)
-    # model.load_state_dict(torch.load('segnext/epoch_9.pth', map_location=device))
-    predictor = BasePredictor(model)
+    is_sam = 'sam' in checkpoint
+    if is_sam:
+        from sam2.build_sam import build_sam2
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
+        assert checkpoint.split('/')[-1] == 'sam2.1_hiera_base_plus.pt'
+        model_cfg = "configs/sam2.1/sam2.1_hiera_b+.yaml"
+        predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint))
+    else:
+        ckpt_path = Path(checkpoint)
+        model = load_is_model(ckpt_path, device)
+        # model.load_state_dict(torch.load('segnext/epoch_9.pth', map_location=device))
+        predictor = BasePredictor(model)
 
     datasets = datasets if isinstance(datasets, tuple) else datasets.split(",")
     for dataset_name in datasets:
@@ -203,8 +211,14 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                         pred_mask = pred_probs > 0.5
                     else:
                         predictor.set_image(image)
-                        pred_probs = predictor.predict(clicker)
-                        pred_mask = pred_probs > 0.5
+                        if is_sam: 
+                            point_coords = np.fliplr(np.array(clicker.get_clicks()[0].coords).reshape(1,2)).copy()
+                            point_labels = np.array([1])
+                            masks, ious, logits = predictor.predict(point_coords, point_labels, multimask_output=True)
+                            pred_mask = masks[np.argmax(ious)] > 0.5
+                        else:
+                            pred_probs = predictor.predict(clicker)
+                            pred_mask = pred_probs > 0.5
 
                     iou = get_iou(gt_mask, pred_mask)
                     iou_per_click_indx.append(iou)
