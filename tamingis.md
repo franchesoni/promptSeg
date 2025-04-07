@@ -1,0 +1,33 @@
+# Taming Image Segmentation
+
+## Summary
+Defining image segmentation is hard, but it boils down to proposing good masks, where ``good'' means ``similar to the ground truth masks''. The usual metric in the community is mAR, which is equivalent to mIoU (we show that). Also, interactive image segmentation methods are evaluated using mIoU@1, and we show \fmc{(to be done)} that mIoU@1 correlates well with mIoU (the first is interactive, the second is zero-shot). This is natural because zero-shot segmentation is based on simulating many individual clicks that are used as inputs of an interactive image segmentor. 
+One issue of the evaluation of interactive image segmentation methods is that it frequently overlooks zero-shot image segmentation metrics (such as mIoU), which makes it hard to assess its applicability to zero-shot segmentation. Moreover, the evaluation usually only involves object-centric datasets, where the prominent objects are the ones annotated, which fail to describe the performance when all parts of an image are potentially relevant, for instance in remote sensing, medical or geological images. 
+In order to have a better evaluation of zero-shot segmentation we propose to evaluate in HyperSim \fmc{cite}, which has perfect annotations covering almost the whole image. The zero-shot segmentation evaluations usually do not restrict the number of proposals, which has an important effect on the performance, therefore we look at the mIoU vs. number of proposals curve, which provides a better understanding.
+To improve zero-shot segmentation, we start from the SegNext architecture, a state-of-the-art interactive image segmentor, and train it for the one-click case (reducing resolution, as it doesn't hurt metrics and improves computational efficiency). In order to allow for interactive annotations we train the network to deal with either one positive click or one negative click. Combining individual predictions by maximum certainty allows for local editing and mask correction without complex methods such as FocalClick.
+Inspired by previous segmentation literature we modify the loss to better match the IoU objective, using a differentiable version of the IoU \fmc{cite lovasz}. 
+By synthetizing a grid of clicks we obtain our zero-shot segmentation result, which refine by expressing it as a union of superpixels obtained from a processing of the predictions based on connectivity and maximum-certainty. We also replace the box non-maximum-supression of SAM with mask non-maximum-supression, which avoids the biases of bounding boxes. 
+Segmentation is multiscale in nature, and in order to train with datasets where masks of different granularities are provided, we propose a loss that makes the model predict level lines correctly. Finally, we provide many visualizations on texture segmentation mosaics, and graph-based methods to obtain partitions of an image in an arbitrary number of regions.
+The result is an easy-to-train method that is competitive with the state-of-the-art (SAM2.1, SegNext), for both zero-shot image segmentation, interactive segmentation and mask editing. Finally, we distill our zero-shot image segmentor into a non-interactive one which is much faster and provides a pixel-level feature space, where features that are close to each other correspond to the same object in the image. 
+
+## Steps
+
+### Benchmarks
+We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU capabilities on three datasets with high quality masks: DAVIS (object centric, video), HQSeg44k (object centric, fine structures), and HyperSim (whole image, synthetic). We always use ViT base as a backbone and measure the IoU in the original image resolution.
+
+**Results:**
+- For reference, the results of Order-Aware IIS are (mIoU@1center): DAVIS=87.29\% @ 1024, DAVIS=88.05\% @ 2048, HQSeg44K=89.40\% @ 1024, HQSeg44K=89.57\% @ 2048. Note that Order-Aware IIS 1. has no code nor weights, 2. was finetuned on HQSeg44K for 15 epochs.  
+- Evaluate official SegNext COCOLVIS-ft-hq44k using official evaluation script (mIoU@1center): DAVIS=85.97\%, HQSeg44K=81.79\% 
+<!-- the following are invalid due to the bad random clicker: -->
+<!-- - Evaluate official SegNext COCOLVIS-ft-hq44k using official evaluation script but random clicker (mIoU@1): DAVIS=83.06\%, HQSeg44K=80.75\%  -->
+<!-- - Evaluate official SegNext COCOLVIS-ft-hq44k using official evaluation script but random clicker and threshold 0.5 (instead of 0.49) (mIoU@1): DAVIS=83.74\%, HQSeg44K=80.57\%  -->
+- Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script (mIoU@1center): DAVIS=71.96\%, HQSeg44K=64.74\% . From this point we can see that finetuning one epoch on HQSeg44K improves the performance quite a bit. 
+- Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker (mIoU@1): DAVIS=67.75\%, HQSeg44K=59.68\%.  
+- Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker and threshold 0.5 (instead of 0.49) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
+- Evaluate official SegNext COCOLVIS @ epoch 90 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
+- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=  **COMPLETE, in tmux 4**
+
+we still need to:
+~1. evaluate sam2.1 on the same datasets~
+2. evaluate all methods over hypersim
+3. evaluate all methods over all datasets in the zero-shot setting for variable number of masks
