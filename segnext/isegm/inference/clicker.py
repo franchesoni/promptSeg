@@ -167,7 +167,8 @@ class RandomClicker(Clicker):
         np.random.seed(0)
         random_numbers = np.random.rand(*self.gt_mask.shape)
         random_mean = (random_numbers * self.gt_mask).sum() / self.gt_mask.sum()
-        np.random.seed((self.seed + hash(str(random_mean))) % 2**32)  # unique seed for each mask
+        random_mask_value = int(str(random_mean)[2:])
+        np.random.seed((self.seed + random_mask_value) % 2**32)  # unique seed for each mask
         fn_mask = np.logical_and(np.logical_and(self.gt_mask, np.logical_not(pred_mask)), self.not_ignore_mask)
         fp_mask = np.logical_and(np.logical_and(np.logical_not(self.gt_mask), pred_mask), self.not_ignore_mask)
         error_mask = np.logical_or(fn_mask, fp_mask)
