@@ -1,4 +1,5 @@
-
+import sys
+PYTHON_VERSION = sys.version[:4]
 from isegm.utils.exp_imports.default import *
 
 MODEL_NAME = 'plainvit_base1024_cocolvis_sax2'
@@ -67,7 +68,9 @@ def train(model: PlainVitModel, cfg) -> None:
 
     train_augmentator = Compose([
         UniformRandomResize(scale_range=(0.75, 1.40)),
-        Flip(),
+        OneOf([
+            HorizontalFlip(), VerticalFlip(), Compose([HorizontalFlip(), VerticalFlip()])
+        ], p=0.5) if PYTHON_VERSION == '3.13' else Flip(),
         RandomRotate90(),
         ShiftScaleRotate(
             shift_limit=0.03, 
