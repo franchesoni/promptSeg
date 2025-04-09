@@ -4,7 +4,7 @@ from easydict import EasyDict as edict
 from albumentations import *
 
 from isegm.data.datasets import *
-from isegm.data.transforms import *
+# from isegm.data.transforms import *
 from isegm.data.points_sampler import MultiPointSampler
 
 from isegm.engine.trainer import ISTrainer

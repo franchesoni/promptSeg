@@ -67,7 +67,8 @@ def train(model: PlainVitModel, cfg) -> None:
     cfg.loss_cfg = loss_cfg
 
     train_augmentator = Compose([
-        UniformRandomResize(scale_range=(0.75, 1.40)),
+        # UniformRandomResize(scale_range=(0.75, 1.40)),
+        RandomScale(scale_limit=(-0.25, 40)),
         OneOf([
             HorizontalFlip(), VerticalFlip(), Compose([HorizontalFlip(), VerticalFlip()])
         ], p=0.5) if PYTHON_VERSION == '3.13' else Flip(),
@@ -85,7 +86,8 @@ def train(model: PlainVitModel, cfg) -> None:
             p=0.75
         ),
         RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.75),
-        ResizeLongestSide(target_length=cfg.img_size),
+        # ResizeLongestSide(target_length=cfg.img_size),
+        LongestMaxSize(max_size=cfg.img_size),
         PadIfNeeded(
             min_height=cfg.img_size,
             min_width=cfg.img_size,
@@ -96,7 +98,8 @@ def train(model: PlainVitModel, cfg) -> None:
     ], p=1.0)
 
     val_augmentator = Compose([
-        ResizeLongestSide(target_length=cfg.img_size),
+        # ResizeLongestSide(target_length=cfg.img_size),
+        LongestMaxSize(max_size=cfg.img_size),
         PadIfNeeded(
             min_height=cfg.img_size, 
             min_width=cfg.img_size, 
