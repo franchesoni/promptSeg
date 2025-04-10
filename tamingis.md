@@ -41,3 +41,16 @@ we still need to:
 current:
 - tmux 0 is running many clicks 512  <- this repro should be compared with the default model
 - tmux 1 is running 1 click 512 
+
+# Appendix
+
+## Data
+We download following the links in the readme of uncbiag/SegNext DAVIS, HQSeg44K, and cocolvis, and extract all files. 
+
+For cocolvis directory, we put the compressed files in the same folder, extract them, and we end up with dirs: [train2017, val2017, train, val]. Now we require x2017 to be inside x/images, which we achieve with
+`ln -s $PWD/train2017 $PWD/train/images`
+`ln -s $PWD/val2017 $PWD/val/images`
+
+Of course, the paths in the `config.yml`should be updated accordingly
+
+
