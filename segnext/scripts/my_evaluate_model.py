@@ -52,13 +52,17 @@ def visualize(clicker, image, gt_mask, pred_probs, dataset_name, index):
     axes[0].set_title(f"{click_type} Click at ({click_x}, {click_y})")
     axes[0].axis("off")
 
-    # pred vs. gt 
+    # pred vs. gt
     err_map = np.zeros_like(image, dtype=float)
-    err_map[:,:,0] = gt_mask if pred_probs is None else pred_probs
-    err_map[:,:,1] = gt_mask
-    err_map[:,:,2] = gt_mask
+    err_map[:, :, 0] = gt_mask if pred_probs is None else pred_probs
+    err_map[:, :, 1] = gt_mask
+    err_map[:, :, 2] = gt_mask
     axes[1].imshow(err_map)
-    axes[1].set_title("Error Map (red=pred, blue=green=gt_mask)" if (pred_probs is not None) else "Ground Truth Mask")
+    axes[1].set_title(
+        "Error Map (red=pred, blue=green=gt_mask)"
+        if (pred_probs is not None)
+        else "Ground Truth Mask"
+    )
     axes[1].axis("off")
 
     # Ground truth mask
@@ -130,11 +134,12 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
     logs_path = Path("logs")
     logs_path.mkdir(exist_ok=True, parents=True)
 
-    is_sam = 'sam' in checkpoint
+    is_sam = "sam" in checkpoint
     if is_sam:
         from sam2.build_sam import build_sam2
         from sam2.sam2_image_predictor import SAM2ImagePredictor
-        assert checkpoint.split('/')[-1] == 'sam2.1_hiera_base_plus.pt'
+
+        assert checkpoint.split("/")[-1] == "sam2.1_hiera_base_plus.pt"
         model_cfg = "configs/sam2.1/sam2.1_hiera_b+.yaml"
         predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint))
     else:
@@ -159,72 +164,44 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
         for index in tqdm(range(len(dataset)), leave=False):
             sample = dataset.get_sample(index)
             image = sample.image
-            assert len(sample.objects_ids) == 1
 
             with torch.no_grad():
-                # evaluate sample
-                gt_mask = sample.gt_mask(sample.objects_ids[0])
-                iou_per_click_indx = []
-                for click_indx in range(c):
-                    clicker = Clicker(gt_mask=gt_mask, seed=click_indx)
-                    pred_mask = np.zeros_like(gt_mask)
-                    clicker.make_next_click(pred_mask)
+                predictor.set_image(image)
+                sample_ious = []
 
-                    if vis:
-                        visualize(clicker, image, gt_mask, None, dataset_name, 0)
+                for object_id in sample.objects_ids:
+                    # evaluate sample
+                    gt_mask = sample.gt_mask(object_id)
+                    iou_per_click_indx = []
+                    for click_indx in range(c):
+                        clicker = Clicker(gt_mask=gt_mask, seed=click_indx)
+                        pred_mask = np.zeros_like(gt_mask)
+                        clicker.make_next_click(pred_mask)
 
-                    if aug:
-                        pred_probs_agg = np.zeros_like(gt_mask, dtype=float)
-                        for rotate in range(4):
-                            for flip in range(2):
-                                # image is (H, W, 3)
-                                aug_img = flip_rotate_image(
-                                    image, rotate=rotate, flip=flip
-                                )
-                                aug_gt_mask = flip_rotate_image(
-                                    gt_mask, rotate=rotate, flip=flip
-                                )
-                                click_state = (
-                                    clicker.get_state()
-                                )  # clicks list of one element
-                                click_state = [
-                                    flip_rotate_click(
-                                        click_state[0],
-                                        image.shape[0],
-                                        image.shape[1],
-                                        rotate,
-                                        flip,
-                                    )
-                                ]
-                                aug_clicker = Clicker(
-                                    gt_mask=aug_gt_mask, seed=click_indx
-                                )
-                                aug_clicker.set_state(click_state)
-                                predictor.set_image(aug_img)
-                                pred_probs_aug = predictor.predict(aug_clicker)
-                                pred_probs_aug = flip_rotate_image(
-                                    pred_probs_aug, rotate=(4 - rotate) % 4, flip=0
-                                )  # transform back to original domain (step 1, unrotate)
-                                pred_probs_aug = flip_rotate_image(
-                                    pred_probs_aug, rotate=0, flip=flip
-                                )  # transform back to original domain (step 2, unflip)
-                                pred_probs_agg += pred_probs_aug
-                        pred_probs = pred_probs_agg / 8
-                        pred_mask = pred_probs > 0.5
-                    else:
-                        predictor.set_image(image)
-                        if is_sam: 
-                            point_coords = np.fliplr(np.array(clicker.get_clicks()[0].coords).reshape(1,2)).copy()
+                        if is_sam:
+                            point_coords = np.fliplr(
+                                np.array(clicker.get_clicks()[0].coords).reshape(1, 2)
+                            ).copy()
                             point_labels = np.array([1])
-                            masks, ious, logits = predictor.predict(point_coords, point_labels, multimask_output=True)
+                            masks, ious, logits = predictor.predict(
+                                point_coords, point_labels, multimask_output=True
+                            )
                             pred_mask = masks[np.argmax(ious)] > 0.5
+                            pred_probs = pred_mask  # we don't really have the full resolution probability maps here
                         else:
                             pred_probs = predictor.predict(clicker)
                             pred_mask = pred_probs > 0.5
 
-                    iou = get_iou(gt_mask, pred_mask)
-                    iou_per_click_indx.append(iou)
-                all_ious.append(np.mean(iou_per_click_indx))
+                        iou = get_iou(gt_mask, pred_mask)
+                        iou_per_click_indx.append(iou)
+
+                    sample_ious.append(np.mean(iou_per_click_indx))
+                    if vis:
+                        visualize(
+                            clicker, image, gt_mask, pred_probs, dataset_name, index
+                        )
+
+            all_ious.append(np.mean(sample_ious))
 
         print("mean iou for", dataset_name, np.mean(all_ious))
 
