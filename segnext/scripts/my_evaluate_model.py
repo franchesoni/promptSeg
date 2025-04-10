@@ -172,6 +172,8 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                 for object_id in sample.objects_ids:
                     # evaluate sample
                     gt_mask = sample.gt_mask(object_id)
+                    if gt_mask.sum() < 256:
+                        continue  # skip very small masks (16x16)
                     iou_per_click_indx = []
                     for click_indx in range(c):
                         clicker = Clicker(gt_mask=gt_mask, seed=click_indx)
