@@ -189,6 +189,7 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
                             pred_mask = masks[np.argmax(ious)] > 0.5
                             pred_probs = pred_mask  # we don't really have the full resolution probability maps here
                         else:
+                            predictor.prev_mask = torch.zeros_like(predictor.prev_mask)  # always reset prev mask before prediction
                             pred_probs = predictor.predict(clicker)
                             pred_mask = pred_probs > 0.5
 
