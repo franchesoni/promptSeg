@@ -25,9 +25,16 @@ We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU 
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker (mIoU@1): DAVIS=67.75\%, HQSeg44K=59.68\%.  
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker and threshold 0.5 (instead of 0.49) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
 - Evaluate official SegNext COCOLVIS @ epoch 90 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
-- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=  **COMPLETE, in tmux 4**
+- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=47.05\%
 
 we still need to:
 ~1. evaluate sam2.1 on the same datasets~
 2. evaluate all methods over hypersim
+    - download hypersim `python download_hypersim.py --contains images/scene_cam_00_final_preview/frame.0000.color.jpg -d /export/home/data/hypersim/ -o` and `python download_hypersim.py --contains images/scene_cam_00_geometry_hdf5/frame.0000.render_entity_id.hdf5 -d /export/home/data/hypersim/`, had to download by hand (curl+unzip+move) the render_identity_id for ai_004_009 (the download consistently failed)
+    - create dataset for hypersim
+    - running eval (takes 1.5 hs) for original_cocolvis@epoch90 for hypersim (need to run for sam2.1b+ too)
 3. evaluate all methods over all datasets in the zero-shot setting for variable number of masks
+
+current:
+- tmux 0 is running many clicks 512  <- this repro should be compared with the default model
+- tmux 1 is running 1 click 512 
