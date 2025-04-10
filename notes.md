@@ -76,6 +76,15 @@ well it's getting there, -4 for davis and -6 for HQSeg44k
 ## next
 - wait for 021 to finish
     - compare 021 vs. 022.
+        - at epoch 50 we have DAVIS 0.674 vs. 0.697 (1 seed), HQSeg44k 0.279 vs. 0.280
 - wait for 023 to finish
-    - compare 022 vs. 023.
+    - compare 022 vs. 023.  <- 022 is better, but more training might help
+        - DAVIS: 691 vs. 680
+        - HQSeg44k 340 vs. 328
     - implement multi-click inference time scaling
+        - (023) mean iou for DAVIS 6816
+        - with 100 ensembling mean iou for DAVIS 3817
+        - with 10 ensembling in log space mean iou for DAVIS 0.38397509545654307 (should be about the same right?)
+        - with 10 ensembling and inverse uncertainty weighting: mean iou for DAVIS 3797 ... that's strange
+        - anne maelle gave me the idea of uncertainty weighting, now i'm getting extra clicks from the most uncertain places and then computing the full prediction as the prediction wthat takes the max certainty prediction for each pixel. the counter intuitive thing is that the click at the most uncetian place might not give you more certainty, as it also depends on the first estimation... in fact, the triangulation _always_ smooths out the prediction. in that sense, there is no prompt which will give more certainty than the initial prompt.  
+        - from the equation we have that the prediction based on $y$ is in fact the interpolation between $P(z\in m |   y\notin m)$ and $P(z\in m | y \in m)$ weighted by $P(y\in m | x \in m)$. It is not obvious whether $P(|y\notin m )< P(|y \in m)$ or the inverse, but we do know that they determine an interval inside $[0,1]$. And we take, for each pixel, a point in this interval. Now, this interpolation increases the certainty only in those pixels where there is an assymetry and $P(|y\notin m)\neq 1-P(|y\in m)$ and the certainty of $P(y\in m|x\in m)$ was low. In theory, we can correct the low certainty estimates if there is assymetry in the other estimates, but there are not that many points with uncertainty so the new estimates are largely useless (if we use them only when they get more certain estimates).

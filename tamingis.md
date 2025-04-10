@@ -9,11 +9,12 @@ Inspired by previous segmentation literature we modify the loss to better match 
 By synthetizing a grid of clicks we obtain our zero-shot segmentation result, which refine by expressing it as a union of superpixels obtained from a processing of the predictions based on connectivity and maximum-certainty. We also replace the box non-maximum-supression of SAM with mask non-maximum-supression, which avoids the biases of bounding boxes. 
 Segmentation is multiscale in nature, and in order to train with datasets where masks of different granularities are provided, we propose a loss that makes the model predict level lines correctly. Finally, we provide many visualizations on texture segmentation mosaics, and graph-based methods to obtain partitions of an image in an arbitrary number of regions.
 The result is an easy-to-train method that is competitive with the state-of-the-art (SAM2.1, SegNext), for both zero-shot image segmentation, interactive segmentation and mask editing. Finally, we distill our zero-shot image segmentor into a non-interactive one which is much faster and provides a pixel-level feature space, where features that are close to each other correspond to the same object in the image. 
+We also report a negative result: data augmentation doesn't work, including pseudo labeling, etc.
 
 ## Steps
 
 ### Benchmarks
-We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU capabilities on three datasets with high quality masks: DAVIS (object centric, video), HQSeg44k (object centric, fine structures), and HyperSim (whole image, synthetic). We always use ViT base as a backbone and measure the IoU in the original image resolution.
+We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU capabilities on three datasets with high quality masks: DAVIS (object centric, video), HQSeg44k (object centric, fine structures), and HyperSim (whole image, synthetic). We always use ViT base as a backbone and measure the IoU in the original image resolution. We do not evaluate against masks smaller than 16x16 pixels. 
 
 **Results:**
 - For reference, the results of Order-Aware IIS are (mIoU@1center): DAVIS=87.29\% @ 1024, DAVIS=88.05\% @ 2048, HQSeg44K=89.40\% @ 1024, HQSeg44K=89.57\% @ 2048. Note that Order-Aware IIS 1. has no code nor weights, 2. was finetuned on HQSeg44K for 15 epochs.  
@@ -24,9 +25,10 @@ We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU 
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script (mIoU@1center): DAVIS=71.96\%, HQSeg44K=64.74\% . From this point we can see that finetuning one epoch on HQSeg44K improves the performance quite a bit. 
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker (mIoU@1): DAVIS=67.75\%, HQSeg44K=59.68\%.  
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker and threshold 0.5 (instead of 0.49) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
-- Evaluate official SegNext COCOLVIS @ epoch 90 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
-- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=47.05\%
+- Evaluate official SegNext COCOLVIS @ epoch 90 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%, Hypersim 32.01\%
+- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=47.05\%, Hypersim 42.36\%
 
+## Next steps
 we still need to:
 ~1. evaluate sam2.1 on the same datasets~
 2. evaluate all methods over hypersim
@@ -34,6 +36,7 @@ we still need to:
     - create dataset for hypersim
     - running eval (takes 1.5 hs) for original_cocolvis@epoch90 for hypersim (need to run for sam2.1b+ too)
 3. evaluate all methods over all datasets in the zero-shot setting for variable number of masks
+4. do the scatter, per dataset, where one image is one point, of the miou@0 vs. miou@1
 
 current:
 - tmux 0 is running many clicks 512  <- this repro should be compared with the default model
