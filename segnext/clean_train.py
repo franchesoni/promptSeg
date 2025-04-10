@@ -15,6 +15,8 @@ def main():
         cfg = EasyDict(yaml.safe_load(f))
     for k, v in args._get_kwargs():
         cfg[k] = v
+    cfg['device'] = torch.device('cuda')
+
 
     torch.backends.cudnn.benchmark = True
     model_script.main(cfg)
