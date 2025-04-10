@@ -145,9 +145,9 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=F
 
     datasets = datasets if isinstance(datasets, tuple) else datasets.split(",")
     for dataset_name in datasets:
-        if dataset_name == "DAVIS":
+        if dataset_name.lower() == "davis":
             dataset = DavisDataset(cfg.DAVIS_PATH)
-        elif dataset_name == "HQSeg44K":
+        elif dataset_name.lower() == "hqseg44k":
             dataset = HQSeg44kDataset(cfg.HQSeg44K_PATH, split="val")
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")

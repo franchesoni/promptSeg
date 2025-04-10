@@ -213,20 +213,6 @@ class HQSeg44kDataset(ISDataset):
         return DSample(image, instances_mask, objects_ids=[1], sample_id=index)
 
 
-# def unit_test():
-#     dataset_train = HQSeg44kDataset('/playpen-raid2/qinliu/data/HQSeg44k', split='train')
-#     num_samples_train = dataset_train.get_samples_number()
-
-#     dataset_val = HQSeg44kDataset('/playpen-raid2/qinliu/data/HQSeg44k', split='val')
-#     num_samples_val = dataset_val.get_samples_number()
-
-#     assert num_samples_train == 44320 and num_samples_val == 1537
-
-
-# if __name__ == '__main__':
-#     unit_test()
-
-
 class DavisDataset(ISDataset):
     def __init__(
         self, dataset_path, images_dir_name="img", masks_dir_name="gt", **kwargs
