@@ -1,12 +1,14 @@
 from pathlib import Path
-
-import cv2
-import numpy as np
 import random
 import pickle
+
+import h5py
+import cv2
 import numpy as np
 import torch
 from torchvision import transforms
+from PIL import Image
+
 
 from isegm.data.base import ISDataset
 from isegm.data.sample import DSample
@@ -237,3 +239,38 @@ class DavisDataset(ISDataset):
         instances_mask[instances_mask > 0] = 1
 
         return DSample(image, instances_mask, objects_ids=[1], sample_id=index)
+
+
+class HypersimDataset(ISDataset):
+    def __init__(self, dataset_path, **kwargs):
+        super(HypersimDataset, self).__init__(**kwargs)
+        self.dataset_path = Path(dataset_path)
+
+        print("Finding images and masks...")
+        images = sorted(
+            self.dataset_path.glob(
+                "ai_*/images/scene_cam_00_final_preview/frame.0000.color.jpg"
+            )
+        )
+        masks = sorted(
+            self.dataset_path.glob(
+                "ai_*/images/scene_cam_00_geometry_hdf5/frame.0000.render_entity_id.hdf5"
+            )
+        )
+        self.dataset_samples = []
+        for mask_path in masks:
+            img_path = Path(
+                str(mask_path).split("_geometry")[0]
+                + "_final_preview/frame.0000.color.jpg"
+            )
+            if img_path in images:
+                self.dataset_samples.append((img_path, mask_path))
+        print("Found {} images and masks.".format(len(self.dataset_samples)))
+
+    def get_sample(self, index) -> DSample:
+        image_path, mask_path = self.dataset_samples[index]
+        image = Image.open(image_path).convert("RGB")
+        labels = h5py.File(mask_path, "r")["dataset"][:]
+        objects_ids = list(np.unique(labels))
+
+        return DSample(image, labels, objects_ids=objects_ids, sample_id=index)
