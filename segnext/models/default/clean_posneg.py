@@ -16,7 +16,8 @@ if PYTHON_VERSION == "3.13":
     HorizontalFlip,
     VerticalFlip,
     OneOf,
-    Affine,
+    LongestMaxSize,
+    RandomScale,
     )
 else:
     from albumentations import Flip
@@ -99,7 +100,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
 
     train_augmentator = Compose(
         [
-            UniformRandomResize(scale_range=(0.75, 1.40)),
+            RandomScale(scale_limit=(-0.25, 40)),
             OneOf([
                 HorizontalFlip(), VerticalFlip(), Compose([HorizontalFlip(), VerticalFlip()])
             ], p=0.5) if PYTHON_VERSION == '3.13' else Flip(),
@@ -115,7 +116,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
                 brightness_limit=(-0.25, 0.25), contrast_limit=(-0.15, 0.4), p=0.75
             ),
             RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=10, p=0.75),
-            ResizeLongestSide(target_length=cfg.img_size),
+            LongestMaxSize(max_size=cfg.img_size),
             PadIfNeeded(
                 min_height=cfg.img_size,
                 min_width=cfg.img_size,
@@ -129,7 +130,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
 
     val_augmentator = Compose(
         [
-            ResizeLongestSide(target_length=cfg.img_size),
+            LongestMaxSize(max_size=cfg.img_size),
             PadIfNeeded(
                 min_height=cfg.img_size,
                 min_width=cfg.img_size,
@@ -184,13 +185,6 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         pin_memory=True,
         num_workers=cfg.workers,
     )
-
-    # val_dataloader = torch.utils.data.DataLoader(
-    #     valset, cfg.val_batch_size,
-    #     shuffle=False,
-    #     drop_last=True, pin_memory=True,
-    #     num_workers=cfg.workers
-    # )
 
     writer = SummaryWriter()
     for epoch in range(num_epochs):
