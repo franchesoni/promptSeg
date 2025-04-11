@@ -26,7 +26,6 @@ from isegm.model.is_plainvit_model import PlainVitModel
 from isegm.data.points_sampler import MultiPointSampler
 from isegm.data.datasets import CocoLvisDataset
 from isegm.model.losses import NormalizedFocalLossSigmoid
-from isegm.data.transforms import ResizeLongestSide, UniformRandomResize
 from isegm.utils.misc import save_checkpoint
 
 MODEL_NAME = "ours"
@@ -188,7 +187,6 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
 
     writer = SummaryWriter()
     for epoch in range(num_epochs):
-        breakpoint()
         for i, batch_data in enumerate(train_dataloader):
             # loss = batch_forward(batch_data)
             batch_data = {k: v.to(cfg.device) for k, v in batch_data.items()}
@@ -210,3 +208,4 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         # save once in a while
         if epoch % 10 == 0:
             save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=epoch)
+    save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=999)
