@@ -41,6 +41,7 @@ we still need to:
 current:
 - tmux 0 is running many clicks 512  <- this repro should be compared with the default model
 - tmux 1 is running 1 click 512 
+- tmux 0 is running 1 posneg 512 (weird)
 
 # Appendix
 
