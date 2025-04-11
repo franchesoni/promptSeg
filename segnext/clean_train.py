@@ -1,3 +1,6 @@
+import sys
+# append to pythopath
+sys.path.append('/home/franchesoni/repos/promptSeg')
 import argparse
 
 import yaml
@@ -15,7 +18,7 @@ def main():
         cfg = EasyDict(yaml.safe_load(f))
     for k, v in args._get_kwargs():
         cfg[k] = v
-    cfg['device'] = torch.device('cuda')
+    cfg['device'] = torch.device(f'cuda:{args.gpus[0]}')
 
 
     torch.backends.cudnn.benchmark = True
