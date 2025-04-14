@@ -152,4 +152,4 @@ def train(model: PlainVitModel, cfg) -> None:
         max_interactive_points=cfg.num_max_points,
         max_num_next_clicks=cfg.num_max_next_points
     )
-    trainer.run(num_epochs=100, validation=False)
+    trainer.run(num_epochs=200, validation=False)
