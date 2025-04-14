@@ -99,18 +99,18 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
 
     train_augmentator = Compose(
         [
-            RandomScale(scale_limit=(-0.25, 40)),
+            # RandomScale(scale_limit=(-0.25, 40)),
             OneOf([
                 HorizontalFlip(), VerticalFlip(), Compose([HorizontalFlip(), VerticalFlip()])
             ], p=0.5) if PYTHON_VERSION == '3.13' else Flip(),
             RandomRotate90(),
-            ShiftScaleRotate(
-                shift_limit=0.03,
-                scale_limit=0,
-                rotate_limit=(-3, 3),
-                border_mode=0,
-                p=0.75,
-            ),
+            # ShiftScaleRotate(
+            #     shift_limit=0.03,
+            #     scale_limit=0,
+            #     rotate_limit=(-3, 3),
+            #     border_mode=0,
+            #     p=0.75,
+            # ),
             RandomBrightnessContrast(
                 brightness_limit=(-0.25, 0.25), contrast_limit=(-0.15, 0.4), p=0.75
             ),
@@ -141,13 +141,22 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         p=1.0,
     )
 
+    # points_sampler = MultiPointSampler(
+    #     one_random_click_sampler="posneg",
+    #     max_num_points=cfg.num_max_points,
+    #     prob_gamma=0.80,
+    #     merge_objects_prob=0,
+    #     max_num_merged_objects=1,
+    # )
     points_sampler = MultiPointSampler(
-        one_random_click_sampler="posneg",
+        one_random_click_sampler=True,
         max_num_points=cfg.num_max_points,
         prob_gamma=0.80,
         merge_objects_prob=0,
         max_num_merged_objects=1,
     )
+
+
 
     trainset = CocoLvisDataset(
         cfg.LVIS_v1_PATH,
