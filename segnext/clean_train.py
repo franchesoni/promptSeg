@@ -1,6 +1,6 @@
 import sys
 # append to pythopath
-sys.path.append('/home/franchesoni/repos/promptSeg')
+sys.path.append('/home/fmarchesoni/promptSeg')
 import argparse
 
 import yaml
