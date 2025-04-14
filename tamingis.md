@@ -17,6 +17,7 @@ We also report a negative result: data augmentation doesn't work, including pseu
 We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU capabilities on three datasets with high quality masks: DAVIS (object centric, video), HQSeg44k (object centric, fine structures), and HyperSim (whole image, synthetic). We always use ViT base as a backbone and measure the IoU in the original image resolution. We do not evaluate against masks smaller than 16x16 pixels. 
 
 **Results:**
+(run with `python segnext/scripts/my_evaluate_model.py checkpoint_path`)
 - For reference, the results of Order-Aware IIS are (mIoU@1center): DAVIS=87.29\% @ 1024, DAVIS=88.05\% @ 2048, HQSeg44K=89.40\% @ 1024, HQSeg44K=89.57\% @ 2048. Note that Order-Aware IIS 1. has no code nor weights, 2. was finetuned on HQSeg44K for 15 epochs.  
 - Evaluate official SegNext COCOLVIS-ft-hq44k using official evaluation script (mIoU@1center): DAVIS=85.97\%, HQSeg44K=81.79\% 
 <!-- the following are invalid due to the bad random clicker: -->
@@ -25,13 +26,29 @@ We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU 
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script (mIoU@1center): DAVIS=71.96\%, HQSeg44K=64.74\% . From this point we can see that finetuning one epoch on HQSeg44K improves the performance quite a bit. 
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker (mIoU@1): DAVIS=67.75\%, HQSeg44K=59.68\%.  
 - Evaluate official SegNext COCOLVIS @ epoch 90 using official evaluation script but random clicker and threshold 0.5 (instead of 0.49) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%. 
-- Evaluate official SegNext COCOLVIS @ epoch 90 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%, Hypersim 32.01\%
-- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=47.05\%, Hypersim 42.36\%
+- Evaluate official SegNext COCOLVIS @ epoch 90 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=67.46\%, HQSeg44K=59.21\%, Hypersim=32.01\%
+- Evaluate SAM2.1b+ official weights with our evaluation script: DAVIS=53.15\%, HQSeg44K=47.05\%, Hypersim=42.36\%
+- Evaluate repro SegNext COCOLVIS @ epoch 90 res 512 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=68.76\%, HQSeg44K=58.68\%, Hypersim=26.12\% (85)
+- Evaluate repro SegNext COCOLVIS @ epoch 90 res 512 1 click using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=70.26\%, HQSeg44K=60.17\%, Hypersim=24.59\% (86)
+- Evaluate repro SegNext COCOLVIS @ epoch 99 res 512 1 click using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=70.57\%, HQSeg44K=60.85\%, Hypersim=24.62\% (86)
+
+conclusions:
+- order aware claims to be the best
+- hqseg finetuning helps
+- random click reduces perf
+- changing threshold reduces perf
+- our evaluation script preserves perf
+- sam2.1+ loses on davis,hqseg but wins on hypersim
+- reducing resolution sustains performance in davis,hqseg but lowers performance -6 pp in hypersim
+- 1 click training increases performance in davis,hqseg but lowers -2 pp in hypersim
+- epoch 99 improves over epoch 90
+
+
 
 ## Next steps
 we still need to:
 ~1. evaluate sam2.1 on the same datasets~
-2. evaluate all methods over hypersim
+~2. evaluate all methods over hypersim~
     - download hypersim `python download_hypersim.py --contains images/scene_cam_00_final_preview/frame.0000.color.jpg -d /export/home/data/hypersim/ -o` and `python download_hypersim.py --contains images/scene_cam_00_geometry_hdf5/frame.0000.render_entity_id.hdf5 -d /export/home/data/hypersim/`, had to download by hand (curl+unzip+move) the render_identity_id for ai_004_009 (the download consistently failed)
     - create dataset for hypersim
     - running eval (takes 1.5 hs) for original_cocolvis@epoch90 for hypersim (need to run for sam2.1b+ too)
