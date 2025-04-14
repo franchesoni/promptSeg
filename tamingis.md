@@ -56,9 +56,11 @@ we still need to:
 4. do the scatter, per dataset, where one image is one point, of the miou@0 vs. miou@1
 
 current:
-- tmux 0 is running many clicks 512  <- this repro should be compared with the default model
-- tmux 1 is running 1 click 512 
-- tmux 0 is running 1 posneg 512 (weird)
+- tmux 0 is running 1 click 512 lite aug
+- tmux 1 is running 1 click 512 lite aug repro
+plan: 
+- compare repro vs original
+- build from there 
 
 # Appendix
 
