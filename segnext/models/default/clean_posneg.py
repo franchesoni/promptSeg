@@ -10,14 +10,15 @@ from albumentations import (
     PadIfNeeded,
     RGBShift,
 )
+
 PYTHON_VERSION = sys.version[:4]
 if PYTHON_VERSION == "3.13":
     from albumentations import (
-    HorizontalFlip,
-    VerticalFlip,
-    OneOf,
-    LongestMaxSize,
-    RandomScale,
+        HorizontalFlip,
+        VerticalFlip,
+        OneOf,
+        LongestMaxSize,
+        RandomScale,
     )
 else:
     from albumentations import Flip
@@ -32,13 +33,11 @@ MODEL_NAME = "ours"
 
 
 def main(cfg):
-    model = build_model(
-        img_size=512, mae_weights_vit_base=cfg.MAE_WEIGHTS.VIT_BASE, device=cfg.device
-    )
+    model = build_model(img_size=512)
     train(model, cfg)
 
 
-def build_model(img_size, mae_weights_vit_base, device) -> PlainVitModel:
+def build_model(img_size) -> PlainVitModel:
     backbone_params = dict(
         img_size=(img_size, img_size),
         patch_size=(16, 16),
@@ -83,9 +82,6 @@ def build_model(img_size, mae_weights_vit_base, device) -> PlainVitModel:
         use_disks=True,
         norm_radius=5,
     )
-    model.backbone.init_weights_from_pretrained(mae_weights_vit_base)
-    model.to(device)
-
     return model
 
 
@@ -95,21 +91,35 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
     cfg.num_max_points = 1
     cfg.num_max_next_points = 0
 
+    # initialize the model
+    model.backbone.init_weights_from_pretrained(cfg.MAE_WEIGHTS.VIT_BASE)
+    model.to(cfg.device)
+    model.train()
+
     loss_fn = NormalizedFocalLossSigmoid(alpha=0.5, gamma=2)
 
     train_augmentator = Compose(
         [
             # RandomScale(scale_limit=(-0.25, 40)),
-            OneOf([
-                HorizontalFlip(), VerticalFlip(), Compose([HorizontalFlip(), VerticalFlip()])
-            ], p=0.5) if PYTHON_VERSION == '3.13' else Flip(),
+            (
+                OneOf(
+                    [
+                        HorizontalFlip(),
+                        VerticalFlip(),
+                        Compose([HorizontalFlip(), VerticalFlip()]),
+                    ],
+                    p=0.5,
+                )
+                if PYTHON_VERSION == "3.13"
+                else Flip()
+            ),
             RandomRotate90(),
             # ShiftScaleRotate(
             #     shift_limit=0.03,
             #     scale_limit=0,
             #     rotate_limit=(-3, 3),
             #     border_mode=0,
-            #     p=0.75,
+            #     p=0.75
             # ),
             RandomBrightnessContrast(
                 brightness_limit=(-0.25, 0.25), contrast_limit=(-0.15, 0.4), p=0.75
@@ -121,7 +131,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
                 min_width=cfg.img_size,
                 border_mode=0,
                 position="top_left",
-                **({} if PYTHON_VERSION=='3.13' else {'value': 0}),
+                **({} if PYTHON_VERSION == "3.13" else {"value": 0}),
             ),
         ],
         p=1.0,
@@ -135,7 +145,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
                 min_width=cfg.img_size,
                 border_mode=0,
                 position="top_left",
-                **({} if PYTHON_VERSION=='3.13' else {'value': 0}),
+                **({} if PYTHON_VERSION == "3.13" else {"value": 0}),
             ),
         ],
         p=1.0,
@@ -155,8 +165,6 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         merge_objects_prob=0,
         max_num_merged_objects=1,
     )
-
-
 
     trainset = CocoLvisDataset(
         cfg.LVIS_v1_PATH,
@@ -212,8 +220,11 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            lr_scheduler.step()
-            print(f"epoch {epoch} step {i}/{len(train_dataloader)}, loss={loss.item()}", end='\r')
+            print(
+                f"epoch {epoch} step {i}/{len(train_dataloader)}, loss={loss.item()}",
+                end="\r",
+            )
+        lr_scheduler.step()
         # save once in a while
         if epoch % 10 == 0:
             save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=epoch)
