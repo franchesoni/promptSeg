@@ -1,6 +1,6 @@
 import sys
 # append to pythopath
-sys.path.append('/home/fmarchesoni/promptSeg')
+sys.path.append('/home/fmarchesoni/promptSeg/segnext')
 import argparse
 
 import yaml
@@ -8,7 +8,8 @@ import torch
 from easydict import EasyDict
 
 import torch
-import segnext.models.default.clean_ours as model_script
+import models.default.clean_ours_hiera as model_script
+
 
 
 def main():
@@ -18,9 +19,7 @@ def main():
         cfg = EasyDict(yaml.safe_load(f))
     for k, v in args._get_kwargs():
         cfg[k] = v
-    cfg['device'] = torch.device(f'cuda:{args.gpus[0]}')
-
-
+    cfg['device'] = torch.device(f'cuda:{args.gpus[0]}') if args.gpus else (torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'))
     torch.backends.cudnn.benchmark = True
     model_script.main(cfg)
 
@@ -83,6 +82,12 @@ def parse_args():
         type=str,
         default=None,
         help="Model weights will be loaded from the specified path if you use this argument.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random number generator seed for reproducibility."
     )
 
     return parser.parse_args()
