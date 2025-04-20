@@ -1,3 +1,4 @@
+import numpy as np
 import sys
 from pathlib import Path
 import torch
@@ -21,7 +22,7 @@ if PYTHON_VERSION == "3.13":
         RandomScale,
     )
 else:
-    from albumentations import Flip
+    raise RuntimeError("should use python 3.13")
 
 from isegm.model.is_plainvit_model import PlainVitModel
 from isegm.data.points_sampler import MultiPointSampler
@@ -85,7 +86,7 @@ def build_model(img_size) -> PlainVitModel:
     return model
 
 
-def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
+def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
     cfg.img_size = model.backbone.patch_embed.img_size[0]
     cfg.val_batch_size = cfg.batch_size
     cfg.num_max_points = 1
@@ -135,22 +136,8 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
             ),
         ],
         p=1.0,
+        seed=cfg.seed,
     )
-
-    val_augmentator = Compose(
-        [
-            LongestMaxSize(max_size=cfg.img_size),
-            PadIfNeeded(
-                min_height=cfg.img_size,
-                min_width=cfg.img_size,
-                border_mode=0,
-                position="top_left",
-                **({} if PYTHON_VERSION == "3.13" else {"value": 0}),
-            ),
-        ],
-        p=1.0,
-    )
-
     # points_sampler = MultiPointSampler(
     #     one_random_click_sampler="posneg",
     #     max_num_points=cfg.num_max_points,
@@ -177,21 +164,18 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         stuff_prob=0.30,
     )
 
-    valset = CocoLvisDataset(
-        cfg.LVIS_v1_PATH,
-        split="val",
-        augmentator=val_augmentator,
-        min_object_area=1000,
-        points_sampler=points_sampler,
-        epoch_len=2000,
-    )
-
     optimizer_params = {"lr": 5e-5, "betas": (0.9, 0.999), "eps": 1e-8}
     lr = optimizer_params["lr"]
     optimizer = torch.optim.Adam(model.parameters(), **optimizer_params)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[50, 90], gamma=0.1
     )
+
+    import random
+
+    random.seed(cfg.seed)
+    np.random.seed(cfg.seed)
+    torch.manual_seed(cfg.seed)
 
     train_dataloader = torch.utils.data.DataLoader(
         trainset,
@@ -204,7 +188,11 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
 
     writer = SummaryWriter()
     for epoch in range(num_epochs):
-        writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], epoch * len(train_dataloader))
+        writer.add_scalar(
+            "learning_rate",
+            optimizer.param_groups[0]["lr"],
+            epoch * len(train_dataloader),
+        )
         for i, batch_data in enumerate(train_dataloader):
             # loss = batch_forward(batch_data)
             batch_data = {k: v.to(cfg.device) for k, v in batch_data.items()}
@@ -227,7 +215,11 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
                 end="\r",
             )
             writer.add_scalar("loss", loss_item, epoch * len(train_dataloader) + i)
-        writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], epoch * len(train_dataloader) + i)
+        writer.add_scalar(
+            "learning_rate",
+            optimizer.param_groups[0]["lr"],
+            epoch * len(train_dataloader) + i,
+        )
         lr_scheduler.step()
         # save once in a while
         if epoch % 10 == 0:
