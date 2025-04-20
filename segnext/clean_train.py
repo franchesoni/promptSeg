@@ -8,7 +8,7 @@ import torch
 from easydict import EasyDict
 
 import torch
-import segnext.models.default.clean_posneg as model_script
+import segnext.models.default.clean_ours as model_script
 
 
 def main():
