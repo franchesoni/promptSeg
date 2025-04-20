@@ -204,6 +204,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
 
     writer = SummaryWriter()
     for epoch in range(num_epochs):
+        writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], epoch * len(train_dataloader))
         for i, batch_data in enumerate(train_dataloader):
             # loss = batch_forward(batch_data)
             batch_data = {k: v.to(cfg.device) for k, v in batch_data.items()}
@@ -220,10 +221,13 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            loss_item = loss.item()
             print(
-                f"epoch {epoch} step {i}/{len(train_dataloader)}, loss={loss.item()}",
+                f"epoch {epoch} step {i}/{len(train_dataloader)}, loss={loss_item}",
                 end="\r",
             )
+            writer.add_scalar("loss", loss_item, epoch * len(train_dataloader) + i)
+        writer.add_scalar("learning_rate", optimizer.param_groups[0]["lr"], epoch * len(train_dataloader) + i)
         lr_scheduler.step()
         # save once in a while
         if epoch % 10 == 0:
