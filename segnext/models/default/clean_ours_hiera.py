@@ -1,4 +1,3 @@
-import random
 import numpy as np
 import sys
 from pathlib import Path
@@ -38,30 +37,30 @@ def main(cfg):
     from sam2.build_sam import build_sam2
 
     model_cfg = "configs/sam2.1/sam2.1_hiera_b+_512.yaml"
-    # checkpoint = (
-    #     "/home/fmarchesoni/promptSeg/sam2/checkpoints/sam2.1_hiera_base_plus.pt"
-    # )
-    # model = build_sam2(model_cfg, checkpoint)
-    model = build_sam2(model_cfg)
     checkpoint = (
-        "/home/fmarchesoni/promptSeg/sam2/checkpoints/mae_hiera_base_plus_224.pth"
+        "/home/fmarchesoni/promptSeg/sam2/checkpoints/sam2.1_hiera_base_plus.pt"
     )
-    hiera_state_dict0 = torch.load(checkpoint)["model_state"]
-    hiera_state_dict = {}
-    for k, v in hiera_state_dict0.items():
-        if "pos_embed" in k:
-            continue  # skip positional embedding
-        if ".mlp.fc1." in k:
-            k = k.replace(".mlp.fc1.", ".mlp.layers.0.")
-        elif ".mlp.fc2." in k:
-            k = k.replace(".mlp.fc2.", ".mlp.layers.1.")
-        if k in dict(model.image_encoder.trunk.named_parameters()):
-            hiera_state_dict[k] = v
-    model.image_encoder.trunk.load_state_dict(hiera_state_dict, strict=False)
+    model = build_sam2(model_cfg, checkpoint, device=cfg.device)
+    # model = build_sam2(model_cfg, device=cfg.device)
+    # checkpoint = (
+    #     "/home/fmarchesoni/promptSeg/sam2/checkpoints/mae_hiera_base_plus_224.pth"
+    # )
+    # hiera_state_dict0 = torch.load(checkpoint)["model_state"]
+    # hiera_state_dict = {}
+    # for k, v in hiera_state_dict0.items():
+    #     if "pos_embed" in k:
+    #         continue  # skip positional embedding
+    #     if ".mlp.fc1." in k:
+    #         k = k.replace(".mlp.fc1.", ".mlp.layers.0.")
+    #     elif ".mlp.fc2." in k:
+    #         k = k.replace(".mlp.fc2.", ".mlp.layers.1.")
+    #     if k in dict(model.image_encoder.trunk.named_parameters()):
+    #         hiera_state_dict[k] = v
+    # model.image_encoder.trunk.load_state_dict(hiera_state_dict, strict=False)
     train(model, cfg)
 
 
-def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
+def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
     cfg.img_size = model.image_size
     cfg.val_batch_size = cfg.batch_size
     cfg.num_max_points = 1
@@ -139,7 +138,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         stuff_prob=0.30,
     )
 
-    optimizer_params = {"lr": 5e-5, "betas": (0.9, 0.999), "eps": 1e-8}
+    optimizer_params = {"lr": 1e-5, "betas": (0.9, 0.999), "eps": 1e-8}
     lr = optimizer_params["lr"]
     optimizer = torch.optim.Adam(model.parameters(), **optimizer_params)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
@@ -243,5 +242,7 @@ def train(model: PlainVitModel, cfg, num_epochs=100) -> None:
         lr_scheduler.step()
         # save once in a while
         if epoch % 10 == 0:
-            save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=epoch)
-    save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=999)
+            torch.save(model.state_dict(), Path(writer.log_dir) / f"model_epoch_{epoch}.pth")
+            # save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=epoch)
+    # save_checkpoint(model, Path(writer.log_dir) / "checkpoints", epoch=999)
+    torch.save(model.state_dict(), Path(writer.log_dir) / "final_model.pth")
