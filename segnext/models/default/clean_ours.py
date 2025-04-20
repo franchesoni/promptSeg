@@ -138,15 +138,8 @@ def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
         p=1.0,
         seed=cfg.seed,
     )
-    # points_sampler = MultiPointSampler(
-    #     one_random_click_sampler="posneg",
-    #     max_num_points=cfg.num_max_points,
-    #     prob_gamma=0.80,
-    #     merge_objects_prob=0,
-    #     max_num_merged_objects=1,
-    # )
     points_sampler = MultiPointSampler(
-        one_random_click_sampler=True,
+        one_random_click_sampler="posneg",
         max_num_points=cfg.num_max_points,
         prob_gamma=0.80,
         merge_objects_prob=0,
