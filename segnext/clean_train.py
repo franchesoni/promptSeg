@@ -8,7 +8,7 @@ import torch
 from easydict import EasyDict
 
 import torch
-import models.default.clean_ours_hiera as model_script
+import models.default.clean_ours as model_script
 
 
 
