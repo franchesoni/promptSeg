@@ -123,11 +123,11 @@ def flip_rotate_click(click, height, width, rotate, flip):
     return new_click
 
 
-def main(checkpoint, datasets="DAVIS,HQSeg44K", cpu=False, vis=False, c=1, aug=False):
+def main(checkpoint, datasets="DAVIS,HQSeg44K,Hypersim", device="cuda", vis=False, c=1, aug=False):
     cfg = load_config_file("config.yml", return_edict=True)
-    if not cpu:
+    if "cuda" in device:
         device = (
-            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+            torch.device(device) if torch.cuda.is_available() else torch.device("cpu")
         )
     else:
         device = torch.device("cpu")
