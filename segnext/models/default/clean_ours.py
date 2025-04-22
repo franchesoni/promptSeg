@@ -27,7 +27,7 @@ else:
 from isegm.model.is_plainvit_model import PlainVitModel
 from isegm.data.points_sampler import MultiPointSampler
 from isegm.data.datasets import CocoLvisDataset
-from isegm.model.losses import NormalizedFocalLossSigmoid
+from isegm.model.losses import NormalizedFocalLossSigmoid, my_lovasz_hinge
 from isegm.utils.misc import save_checkpoint
 
 MODEL_NAME = "ours"
@@ -86,7 +86,7 @@ def build_model(img_size) -> PlainVitModel:
     return model
 
 
-def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
+def train(model: PlainVitModel, cfg, num_epochs=201) -> None:
     cfg.img_size = model.backbone.patch_embed.img_size[0]
     cfg.val_batch_size = cfg.batch_size
     cfg.num_max_points = 1
@@ -97,7 +97,8 @@ def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
     model.to(cfg.device)
     model.train()
 
-    loss_fn = NormalizedFocalLossSigmoid(alpha=0.5, gamma=2)
+    compute_focal_loss = NormalizedFocalLossSigmoid(alpha=0.5, gamma=2)
+    compute_lovasz_loss = my_lovasz_hinge
 
     train_augmentator = Compose(
         [
@@ -197,7 +198,9 @@ def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
             prompts = {"points": points, "prev_mask": prev_mask}
             prompt_feats = model.get_prompt_feats(image.shape, prompts)
             output = model(image.shape, image_feats, prompt_feats)
-            loss = torch.mean(loss_fn(output["instances"], gt_mask))
+            lovasz_loss = torch.mean(compute_lovasz_loss(torch.tanh(output["instances"]).view(gt_mask.shape[0], -1), gt_mask.view(gt_mask.shape[0], -1)))
+            focal_loss = torch.mean(compute_focal_loss(output["instances"], gt_mask))
+            loss = lovasz_loss + focal_loss
             # now optim step
             optimizer.zero_grad()
             loss.backward()
@@ -208,6 +211,8 @@ def train(model: PlainVitModel, cfg, num_epochs=21) -> None:
                 end="\r",
             )
             writer.add_scalar("loss", loss_item, epoch * len(train_dataloader) + i)
+            writer.add_scalar("lovasz_loss", lovasz_loss.item(), epoch * len(train_dataloader) + i)
+            writer.add_scalar("focal_loss", focal_loss.item(), epoch * len(train_dataloader) + i)
         writer.add_scalar(
             "learning_rate",
             optimizer.param_groups[0]["lr"],

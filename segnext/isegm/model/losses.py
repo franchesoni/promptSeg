@@ -6,6 +6,26 @@ import torch.nn.functional as F
 from isegm.utils import misc
 
 
+def my_lovasz_hinge(logits, gt, downsample=False):
+    if downsample:
+        offset = int(torch.randint(downsample - 1, (1,)))
+        logits, gt = logits[:, offset::downsample], gt[:, offset::downsample]
+        # B, HW
+    gt = 1.0 * gt  # go float
+    areas = gt.sum(dim=1, keepdims=True)  # B, 1
+    # per_image = True, ignore = None
+    signs = 2 * gt - 1
+    errors = 1 - logits * signs
+    errors_sorted, perm = torch.sort(errors, dim=1, descending=True)
+    gt_sorted = torch.gather(gt, 1, perm)  # B, HW
+    # lovasz grad
+    intersection = areas - gt_sorted.cumsum(dim=1)  # B, HW
+    union = areas + (1 - gt_sorted).cumsum(dim=1)  # B, HW
+    jaccard = 1 - intersection / union  # B, HW
+    jaccard[:, 1:] = jaccard[:, 1:] - jaccard[:, :-1]
+    loss = (torch.relu(errors_sorted) * jaccard).sum(dim=1)  # B,
+    return torch.nanmean(loss)
+
 class NormalizedFocalLossSigmoid(nn.Module):
     def __init__(self, axis=-1, alpha=0.25, gamma=2, max_mult=-1, eps=1e-12,
                  from_sigmoid=False, detach_delimeter=True,
