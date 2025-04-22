@@ -231,7 +231,9 @@ class VisionTransformer(nn.Module):
         if other_feats is not None:
             x += other_feats
 
+        # fix: interpolate pos embeddings
         x = self.pos_drop(x + self.pos_embed[:, 1:])
+        # fix: add cls (and optionally registers) tokens
 
         num_blocks = len(self.blocks)
         if self.global_atten_freq <= 1:
@@ -239,6 +241,7 @@ class VisionTransformer(nn.Module):
             for i in range(num_blocks):
                 x = self.blocks[i](x)
         else:
+            raise NotImplementedError("We removed window attention")
             # perform global attention sparsely with window attention
             is_window_splitted = False
             for i in range(1, num_blocks + 1):
@@ -254,6 +257,7 @@ class VisionTransformer(nn.Module):
 
                 x = self.blocks[i-1](x)
 
+        # fix: remove cls (and optionally registers) tokens
         if keep_shape:
             C_new = x.shape[-1]
             H_new = H // self.patch_embed.patch_size[0]

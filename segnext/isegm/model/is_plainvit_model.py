@@ -224,6 +224,7 @@ class PlainVitModel(nn.Module):
 
         # normalize and resize image
         x = self.normalization(x)
+        # fix: assert correct size (multiple) and remove this interpolation
         x = F.interpolate(x, self.target_length, mode="bilinear", align_corners=False)
 
         return x
@@ -256,6 +257,7 @@ class PlainVitModel(nn.Module):
         """
         # resize the previous mask to the target length
         prev_mask = prompts['prev_mask']
+        # fix: remove this interpolation
         prev_mask = F.interpolate(
             prev_mask, self.target_length, mode='bilinear', align_corners=False)
 
@@ -265,6 +267,7 @@ class PlainVitModel(nn.Module):
             for point_id in range(len(points[batch_id])):
                 if points[batch_id, point_id, 2] > -1: # pos. or neg. points
                     w, h = points[batch_id, point_id, 0], points[batch_id, point_id, 1]
+                    # fix: remove the scaling due to interpolation
                     w = int(w * (self.target_length / self.orig_size[0]) + 0.5)
                     h = int(h * (self.target_length / self.orig_size[1]) + 0.5)
                     points[batch_id, point_id, 0], points[batch_id, point_id, 1] = w, h 
@@ -275,6 +278,7 @@ class PlainVitModel(nn.Module):
 
         if keep_shape: # BNC -> BCHW
             B, N, C = prompt_feats.shape
+            # fix: do not assume target length
             H = self.target_length // self.visual_prompts_encoder.patch_size[0]
             W = self.target_length // self.visual_prompts_encoder.patch_size[1]
             assert N == H*W
@@ -314,6 +318,7 @@ class PlainVitModel(nn.Module):
         fused_features = self.fusion(image_feats, prompt_feats)
         pyramid_features = self.neck(fused_features)
         seg_prob = self.head(pyramid_features)
+        # fix: remove this interpolation, but be careful, align_corners=True followed by align_corners=False in postprocess
         seg_prob = F.interpolate(
             seg_prob, 
             size=self.target_length, 
