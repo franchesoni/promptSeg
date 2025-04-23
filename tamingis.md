@@ -31,6 +31,39 @@ We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU 
 - Evaluate repro SegNext COCOLVIS @ epoch 90 res 512 using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=68.76\%, HQSeg44K=58.68\%, Hypersim=26.12\% (85)
 - Evaluate repro SegNext COCOLVIS @ epoch 90 res 512 1 click using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=70.26\%, HQSeg44K=60.17\%, Hypersim=24.59\% (86)
 - Evaluate repro SegNext COCOLVIS @ epoch 99 res 512 1 click using our evaluation script (random and 0.5 thresh) (mIoU@1): DAVIS=70.57\%, HQSeg44K=60.85\%, Hypersim=24.62\% (86)
+- Evaluate repro SegNext COCOLVIS @ epoch 99 res 512 1 click lite aug using our evaluation script (mIoU@1): DAVIS=70.36\%, HQSeg44K=61.70\%, Hypersim=25.10\% (87) (evaluating in tmux 6)
+- custom repro v0.0 (evaluating in tmux 7) DAVIS=34.71\%,HQSeg44K=30.24\%,Hypersim=14.77\%
+
+| Method / Setting                                                                                    | DAVIS (%) | HQSeg44K (%) | Hypersim (%) | Notes                                                 |
+| --------------------------------------------------------------------------------------------------- | --------- | ------------ | ------------ | ----------------------------------------------------- |
+| Order-Aware IIS (mIoU@1center) @ 1024                                                               | 87.29     | 89.40        | -            | No code/weights, finetuned on HQSeg44K for 15 epochs  |
+| Order-Aware IIS (mIoU@1center) @ 2048                                                               | 88.05     | 89.57        | -            |                                                       |
+| SegNext COCOLVIS-ft-hq44k (official eval, mIoU@1center)                                             | 85.97     | 81.79        | -            |                                                       |
+| SegNext COCOLVIS @ epoch 90 (official eval, mIoU@1center)                                           | 71.96     | 64.74        | -            | Finetuning one epoch on HQSeg44K improves performance |
+| SegNext COCOLVIS @ epoch 90 (official eval, random clicker, mIoU@1)                                 | 67.75     | 59.68        | -            |                                                       |
+| SegNext COCOLVIS @ epoch 90 (official eval, random clicker, threshold 0.5, mIoU@1)                  | 67.46     | 59.21        | -            |                                                       |
+| SegNext COCOLVIS @ epoch 90 (our eval, random clicker, threshold 0.5, mIoU@1)                       | 67.46     | 59.21        | 32.01        |                                                       |
+| SAM2.1b+ (official weights, our eval, mIoU@1)                                                       | 53.15     | 47.05        | 42.36        |                                                       |
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Repro SegNext COCOLVIS @ epoch 90 res 512 (our eval, random clicker, threshold 0.5, mIoU@1)         | 68.76     | 58.68        | 26.12        | (85)                                                  |
+| Repro SegNext COCOLVIS @ epoch 90 res 512 1 click (our eval, random clicker, threshold 0.5, mIoU@1) | 70.26     | 60.17        | 24.59        | (86)                                                  |
+| Repro SegNext COCOLVIS @ epoch 99 res 512 1 click (our eval, random clicker, threshold 0.5, mIoU@1) | 70.57     | 60.85        | 24.62        | (86)                                                  |
+| Repro SegNext COCOLVIS @ epoch 99 res 512 1 click lite aug (our eval, mIoU@1)                       | 70.36     | 61.70        | 25.10        | (87), evaluating in tmux 6                            |
+| Custom repro (same than above)                                                                      | 70.46     | 61.55        | 24.91        |                                                       |
+| Custom repro @ epoch 10                                                                             | 64.71     | 57.30        | 20.92        |                                                       |
+| Custom repro @ epoch 10 posneg                                                                      | 65.63     | 53.28        | 19.03        |                                                       |
+| Custom repro @ epoch 10 posneg lovasz                                                               | 63.24     | 47.84        | 08.54        |                                                       |
+| Custom repro @ epoch 20 posneg                                                                      | 67.30     | 55.37        | 21.40        |                                                       |
+| Custom repro @ epoch 20 posneg lovasz                                                               | 65.87     | 52.75        | 16.66        |                                                       |
+| Custom repro @ epoch 70                                                                             | 69.68     | 61.95        | 24.80        |                                                       |
+| Custom repro @ epoch 70 posneg                                                                      | 68.78     | 59.75        | 24.4        |                                                       |
+| Custom repro @ epoch 70 posneg lovasz                                                               | 70.29     | 62.31        | 20.71        |                                                       |
+| Custom repro @ epoch 130 posneg                                                                     | 69.30     | 59.99        | 24.36        |                                                       |
+
+# thought, next 
+thought: lovasz seems to help on object centric but hurt for hypersim. I wonder if it's because getting better in one means being worse in the other.
+
+evaluating our repro over checkpoitns we see that with 10 epochs we get 65 davis and with 80 epochs we get 70 davis (70.51 at 90 70.46 at 99), so we can use 10 epochs for finding our best designs.
 
 conclusions:
 - order aware claims to be the best
@@ -54,13 +87,22 @@ we still need to:
     - running eval (takes 1.5 hs) for original_cocolvis@epoch90 for hypersim (need to run for sam2.1b+ too)
 3. evaluate all methods over all datasets in the zero-shot setting for variable number of masks
 4. do the scatter, per dataset, where one image is one point, of the miou@0 vs. miou@1
+improvements in mind:
+- lovasz loss
+- track iou too
+- multiscale loss
+- scheduled cadamw / sing
+- make resolution independent
+- train with sa1b
+- scale
 
 current:
 - tmux 0 is running 1 click 512 lite aug
-- tmux 1 is running 1 click 512 lite aug repro
+- tmux 1 is running 1 click 512 lite aug repro (batch-size=24)
 plan: 
-- compare repro vs original
-- build from there 
+- evaluate zero-shot?
+- compare repro vs original (very bad)
+- build from there (-valdataset, +aug, +scheduled cadamw, +lovasz)
 
 # Appendix
 
