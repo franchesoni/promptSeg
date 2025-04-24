@@ -241,7 +241,6 @@ class VisionTransformer(nn.Module):
             for i in range(num_blocks):
                 x = self.blocks[i](x)
         else:
-            raise NotImplementedError("We removed window attention")
             # perform global attention sparsely with window attention
             is_window_splitted = False
             for i in range(1, num_blocks + 1):
