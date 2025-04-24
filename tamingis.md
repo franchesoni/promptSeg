@@ -56,8 +56,10 @@ We benchmark interactive methods on their interactive mIoU@1 and zero-shot mIoU 
 | Custom repro @ epoch 20 posneg                                                                      | 67.30     | 55.37        | 21.40        |                                                       |
 | Custom repro @ epoch 20 posneg lovasz                                                               | 65.87     | 52.75        | 16.66        |                                                       |
 | Custom repro @ epoch 70                                                                             | 69.68     | 61.95        | 24.80        |                                                       |
-| Custom repro @ epoch 70 posneg                                                                      | 68.78     | 59.75        | 24.4        |                                                       |
+| Custom repro @ epoch 70 posneg                                                                      | 68.78     | 59.75        | 24.40         |                                                       |
 | Custom repro @ epoch 70 posneg lovasz                                                               | 70.29     | 62.31        | 20.71        |                                                       |
+| Custom repro @ epoch 100 posneg lovasz                                                              | 70.52     | 62.31        | 20.71        |                                                       |
+| Custom repro @ epoch 160 posneg lovasz                                                              | 70.65     | 60.58        | 22.11        |                                                       |
 | Custom repro @ epoch 130 posneg                                                                     | 69.30     | 59.99        | 24.36        |                                                       |
 
 # thought, next 
