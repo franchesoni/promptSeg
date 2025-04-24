@@ -79,6 +79,14 @@ conclusions:
 - epoch 99 improves over epoch 90
 
 
+# Zero-shot segmentation evaluation
+We can assert that
+1. image segmentation should be evaluated by measuring the ability to recover ground truth masks,
+2. the mIoU (or mAR) is the metric of choice, and
+3. we need to look at the mIoU vs. number of masks curve.
+
+Therefore a zero-shot segmentation method is such that, given an image, returns an ordered sequence of masks.
+Given such sequence, we can compute the mIoU-tries curve, and also optimize the sequence in an oracular way (with a greedy method) and get mIoU-oracle tries. This second curve might be useful to see if the mask ordering method can be improved.
 
 ## Next steps
 we still need to:
