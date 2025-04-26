@@ -360,7 +360,7 @@ def get_mask_generator(
     return mask_generator
 
 
-def generate_masks_sam(image, mask_generator):
+def generate_masks_sam(image, mask_generator, multiscale=True):
     mask_data = mask_generator._generate_masks(image)
     stability_scores = mask_data["stability_score"]
     # logits = mask_data["low_res_masks"]
@@ -368,14 +368,31 @@ def generate_masks_sam(image, mask_generator):
     mask_data["segmentations"] = [
         rle_to_mask(rle) for rle in mask_data["rles"]
     ]  # masks
-    masks = np.array(mask_data["segmentations"])
-    # points = np.array(mask_data["points"])
+    # select one mask per point (the one with biggest score)
     scores = (ious + stability_scores) / 2
-    sorted_masks = masks[np.argsort(scores)]
+    if not multiscale:
+        points = np.array(mask_data["points"])
+        unique_points = np.unique(points, axis=0)
+        keep_indices = []
+        for point in unique_points:
+            same_point_mask = np.all(point == points, axis=1)
+            point_scores = scores[same_point_mask]
+            max_score = point_scores.max()
+            mask_indices = np.where(same_point_mask)[0]
+            max_score_indices = mask_indices[point_scores==max_score]
+            keep_indices.extend(max_score_indices.tolist())
+        # Filter masks and sort by score
+        keep_indices = np.array(keep_indices)
+        masks = np.array(mask_data["segmentations"])[keep_indices]
+        scores = scores[keep_indices]
+    else:
+        masks = np.array(mask_data["segmentations"])
+    sorted_order = np.argsort(scores)
+    sorted_masks = masks[sorted_order]
     return sorted_masks#, logits, ious, stability_scores, points
 
 ##### MAIN ################
-def main(checkpoint, tag, datasets="DAVIS,HQSeg44K,Hypersim", device="cuda", vis=False, points_per_side=32, nms_thresh=0.75, stability_thresh=0.75):
+def main(checkpoint, tag, datasets="DAVIS,HQSeg44K,Hypersim", device="cuda", vis=False, points_per_side=32, nms_thresh=0.75, stability_thresh=0.0):
     cfg = load_config_file("config.yml", return_edict=True)
     if "cuda" in device:
         device = (
