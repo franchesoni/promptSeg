@@ -145,7 +145,9 @@ def main(checkpoint, datasets="DAVIS,HQSeg44K,Hypersim", device="cuda", vis=Fals
     else:
         ckpt_path = Path(checkpoint)
         model = load_is_model(ckpt_path, device)
-        # model.load_state_dict(torch.load('segnext/epoch_9.pth', map_location=device))
+        # # exception 
+        # custom_checkpoint = '/home/fmarchesoni/promptSeg/runs/Apr28_17-46-09_epsl95/checkpoints/010.pth'
+        # model.load_state_dict(torch.load(custom_checkpoint, weights_only=False)['state_dict'])
         predictor = BasePredictor(model)
 
     datasets = datasets if isinstance(datasets, tuple) else datasets.split(",")
